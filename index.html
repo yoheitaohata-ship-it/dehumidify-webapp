@@ -16,25 +16,35 @@
     header h1 { font-size: 18px; margin: 0; }
     main { padding: 16px; max-width: 900px; margin: 0 auto; }
     .card { background:#fff; border:1px solid #eee; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-    .row { display:grid; grid-template-columns: 0.75fr 1fr 0.4fr; gap:10px; align-items:center; }
-    label { display:block; font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+    /* 入力行のベースレイアウト */
+    .pair { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    .row { display:grid; grid-template-columns: 0.8fr 1fr 0.4fr; gap:8px; align-items:center; }
+    @media (max-width:600px){
+      .pair { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 0.9fr 1fr 0.4fr; }
+    }
+
+    label { font-size:13px; color:var(--muted); white-space:nowrap; }
     input[type="number"] {
       width:100%; box-sizing:border-box; padding:8px 10px; border-radius:10px;
       border:1px solid #ddd; font-size:16px;
     }
-    .unit { white-space: nowrap; color:#555; font-size: 14px; }
-    @media (max-width:480px){ .row { grid-template-columns: 0.9fr 1fr 0.4fr; } }
-    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-    button { appearance:none; border:none; border-radius: 10px; padding: 10px 14px; font-size: 16px; cursor:pointer; }
-    .primary { background: var(--accent); color: #fff; }
+    .unit { white-space:nowrap; color:#555; font-size:14px; }
+
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    button { appearance:none; border:none; border-radius:10px; padding:10px 14px; font-size:16px; cursor:pointer; }
+    .primary { background:var(--accent); color:#fff; }
     .secondary { background:#eee; color:#333; }
-    .msg { margin: 8px 0; font-size:14px; }
-    .msg.ok { color: var(--accent); }
-    .msg.err { color: var(--err); }
-    table { width:100%; border-collapse: collapse; }
-    th, td { padding:8px 6px; border-bottom:1px solid #eee; text-align: right; }
-    th:nth-child(1), td:nth-child(1) { text-align:left; }
-    footer { padding: 16px; text-align:center; color:#888; font-size:13px; }
+    .msg { margin:8px 0; font-size:14px; }
+    .msg.ok { color:var(--accent); }
+    .msg.err { color:var(--err); }
+
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:8px 6px; border-bottom:1px solid #eee; text-align:right; }
+    th:nth-child(1), td:nth-child(1){ text-align:left; }
+
+    footer { padding:16px; text-align:center; color:#888; font-size:13px; }
   </style>
 </head>
 <body>
@@ -43,12 +53,23 @@
     <section class="card">
       <h2 style="margin:0 0 10px 0; font-size:16px;">入力</h2>
 
-      <div class="row"><label>吸込乾球温度</label><input id="T_in" type="number" step="0.1" /><span class="unit">°C(DB)</span></div>
-      <div class="row"><label>吸込相対湿度</label><input id="RH_in" type="number" step="0.1" /><span class="unit">%RH</span></div>
-      <div class="row"><label>冷却後乾球温度</label><input id="T_out" type="number" step="0.1" /><span class="unit">°C(DB)</span></div>
-      <div class="row"><label>冷却後相対湿度</label><input id="RH_out" type="number" step="0.1" /><span class="unit">%RH</span></div>
-      <div class="row"><label>風量（任意）</label><input id="V" type="number" step="0.1" /><span class="unit">m³/min</span></div>
-      <div class="row"><label>冷却能力（任意）</label><input id="Q" type="number" step="0.1" /><span class="unit">kW</span></div>
+      <!-- 吸込ペア -->
+      <div class="pair">
+        <div class="row"><label>吸込乾球温度</label><input id="T_in" type="number" step="0.1" /><span class="unit">°C(DB)</span></div>
+        <div class="row"><label>吸込相対湿度</label><input id="RH_in" type="number" step="0.1" /><span class="unit">%RH</span></div>
+      </div>
+
+      <!-- 冷却後ペア -->
+      <div class="pair">
+        <div class="row"><label>冷却後乾球温度</label><input id="T_out" type="number" step="0.1" /><span class="unit">°C(DB)</span></div>
+        <div class="row"><label>冷却後相対湿度</label><input id="RH_out" type="number" step="0.1" /><span class="unit">%RH</span></div>
+      </div>
+
+      <!-- 風量・能力ペア -->
+      <div class="pair">
+        <div class="row"><label>風量（任意）</label><input id="V" type="number" step="0.1" /><span class="unit">m³/min</span></div>
+        <div class="row"><label>冷却能力（任意）</label><input id="Q" type="number" step="0.1" /><span class="unit">kW</span></div>
+      </div>
 
       <div class="actions">
         <button id="calc" class="primary">計算</button>
@@ -69,7 +90,6 @@
       </table>
     </section>
   </main>
-
   <footer>© 空気線図計算</footer>
 
   <script>
@@ -80,6 +100,8 @@
     const v_sp=(T,x)=>(R_AIR*(T+273.15)/P_ATM)*(1+1.6078*x);
     const fnum=v=>{const n=Number(v);return Number.isFinite(n)?n:null;};
     const fmt=(v,n=1)=>Number.isFinite(v)?v.toFixed(n):"-";
+
+    const $=id=>document.getElementById(id);
 
     function compute(){
       const msg=$("msg"),card=$("resultsCard");msg.textContent="";card.style.display="none";
@@ -103,10 +125,15 @@
       $("rm").textContent=fmt(m_dot,4);
       msg.textContent="計算しました。";msg.classList.add("ok");card.style.display="block";
     }
-    function clearAll(){["T_in","RH_in","T_out","RH_out","V","Q"].forEach(id=>$("id"));location.reload();}
-    const $=id=>document.getElementById(id);
+
+    function clearAll(){
+      ["T_in","RH_in","T_out","RH_out","V","Q"].forEach(id=>$(id).value="");
+      $("resultsCard").style.display="none";
+      $("msg").textContent="";
+    }
+
     $("calc").onclick=compute;
-    $("clear").onclick=()=>{["T_in","RH_in","T_out","RH_out","V","Q"].forEach(i=>$(i).value="");$("resultsCard").style.display="none";$("msg").textContent="";};
+    $("clear").onclick=clearAll;
   </script>
 </body>
 </html>
