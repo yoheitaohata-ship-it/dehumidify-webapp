@@ -14,14 +14,14 @@
   .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
   @media (min-width:720px){ .grid { grid-template-columns: 1fr 1fr; } }
   .card { background:var(--card); border:1px solid #e5e7eb; border-radius:12px; padding:12px; }
-  .card h2 { margin:4px 0 10px; font-size:16px; }
+  .card h2, .card h3 { margin:4px 0 10px; font-size:16px; }
   .row { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; margin-bottom:8px; }
   .row label { display:block; font-size:13px; color:var(--muted); }
   input[type="number"] { width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:10px; font-size:16px; }
   .actions { display:flex; gap:8px; margin:10px 0; }
   button { cursor:pointer; padding:10px 14px; border-radius:10px; border:1px solid #cbd5e1; background:#fff; font-weight:600; }
   button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
-  #msg { margin:8px 0; color:#b91c1c; font-weight:600; min-height:1.5em; }
+  #msg { margin:8px 0; color:#065f46; font-weight:600; min-height:1.5em; white-space:pre-line; }
   .result { display:none; }
   .result h3 { margin:6px 0 6px; font-size:15px; }
   .kvs { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
@@ -45,7 +45,7 @@
           <div class="row">
             <div>
               <label>乾球温度 T<sub>in</sub> [°C]</label>
-              <input id="T_in" type="number" inputmode="decimal"  />
+              <input id="T_in" type="number" inputmode="decimal" />
             </div>
             <div>
               <label>相対湿度 RH<sub>in</sub> [%]</label>
@@ -58,11 +58,11 @@
           <div class="row">
             <div>
               <label>乾球温度 T<sub>out</sub> [°C]</label>
-              <input id="T_out" type="number" inputmode="decimal"  />
+              <input id="T_out" type="number" inputmode="decimal" />
             </div>
             <div>
               <label>相対湿度RH<sub>out</sub>[%]</label>
-              <input id="RH_out" type="number" inputmode="decimal"  />
+              <input id="RH_out" type="number" inputmode="decimal" />
             </div>
           </div>
         </div>
@@ -152,8 +152,16 @@ function ps(Tc){ return 0.61078 * Math.exp((17.27*Tc)/(Tc+237.3)); }
 
 /* 相対湿度→絶対湿度 x (kg/kg, 乾き空気基準) */
 function x_from_phi(phi, Tc){
+  phi = Math.max(0.001, Math.min(0.999, phi));
   const pv = phi * ps(Tc);                 // kPa
   return 0.622 * pv / (P_ATM - pv);        // kg/kg
+}
+
+/* x・T から相対湿度 phi を逆算 */
+function phi_from_x_T(x, Tc){
+  x = Math.max(1e-6, x);
+  const pv = (x * P_ATM) / (0.622 + x);    // kPa
+  return Math.max(0.0, Math.min(1.0, pv / ps(Tc)));
 }
 
 /* 比エンタルピ（kJ/kg(DA)）*/
@@ -168,6 +176,7 @@ function v_specific(Tc, x){
 
 /* 露点（°C）: pv = phi*ps(T) を用いて逆算（Magnus-Tetens 逆式）*/
 function dew_point(phi, Tc){
+  phi = Math.max(0.001, Math.min(0.999, phi));
   const pv_kPa = phi * ps(Tc);
   const y = Math.log(pv_kPa / 0.61078);
   return (237.3 * y) / (17.27 - y);
@@ -200,7 +209,8 @@ function fmt(x, n=1){ return (x==null || !Number.isFinite(x)) ? "-" : x.toFixed(
 
 /* 1状態の空気性質まとめを計算 */
 function airProps(Tc, RHpct){
-  const phi = RHpct/100.0;
+  if (Tc==null || RHpct==null) return null;
+  const phi = Math.max(0.001, Math.min(0.999, RHpct/100.0));
   const x   = x_from_phi(phi, Tc);          // kg/kg
   const h   = h_moist_air(Tc, x);
   const v   = v_specific(Tc, x);
@@ -212,6 +222,53 @@ function airProps(Tc, RHpct){
   return { Tc, RH: RHpct, x, h, v, Td, Tw, pv, mu, DI };
 }
 
+/* 単変数の2分法ソルバ */
+function solve_bisect(f, a, b, tol=1e-6, maxit=80){
+  let fa = f(a), fb = f(b);
+  if (!Number.isFinite(fa) || !Number.isFinite(fb)) return null;
+  if (fa*fb>0){ // 端点同符号→スキャンして符号反転区間を探す
+    const N=40; let left=a; let fleft=fa;
+    for(let i=1;i<=N;i++){
+      const right = a + (b-a)*i/N;
+      const fright = f(right);
+      if (!Number.isFinite(fright)) return null;
+      if (fleft*fright<=0){ a=left; b=right; fa=fleft; fb=fright; break; }
+      left = right; fleft = fright;
+    }
+    if (fa*fb>0) return null;
+  }
+  for(let i=0;i<maxit;i++){
+    const m = 0.5*(a+b);
+    const fm = f(m);
+    if (!Number.isFinite(fm)) return null;
+    if (Math.abs(fm)<tol || Math.abs(b-a)<tol) return m;
+    if (fa*fm<=0){ b=m; fb=fm; } else { a=m; fa=fm; }
+  }
+  return 0.5*(a+b);
+}
+
+/* 主表示の充填（propsがnullならスキップ） */
+function fillState(prefix, P){
+  if(!P){
+    ["T","Tw","RH","x","Td","pv","v","h","mu","DI"].forEach(k=>{
+      const id = `${prefix}_${k}`;
+      const el = document.getElementById(id);
+      if(el) el.textContent = "-";
+    });
+    return;
+  }
+  document.getElementById(`${prefix}_T`).textContent  = fmt(P.Tc, 1);
+  document.getElementById(`${prefix}_Tw`).textContent = fmt(P.Tw, 1);
+  document.getElementById(`${prefix}_RH`).textContent = fmt(P.RH, 1);
+  document.getElementById(`${prefix}_x`).textContent  = fmt(P.x*1000.0, 1); // g/kg
+  document.getElementById(`${prefix}_Td`).textContent = fmt(P.Td, 1);
+  document.getElementById(`${prefix}_pv`).textContent = fmt(P.pv, 0);
+  document.getElementById(`${prefix}_v`).textContent  = fmt(P.v, 4);
+  document.getElementById(`${prefix}_h`).textContent  = fmt(P.h, 1);
+  document.getElementById(`${prefix}_mu`).textContent = fmt(P.mu, 1);
+  document.getElementById(`${prefix}_DI`).textContent = fmt(P.DI, 1);
+}
+
 /* メイン計算 */
 function compute(){
   const msg = document.getElementById("msg");
@@ -219,88 +276,142 @@ function compute(){
   msg.textContent = "";
   outWrap.style.display = "none";
 
-  const T_in  = fnum(document.getElementById("T_in").value);
-  const RH_in = fnum(document.getElementById("RH_in").value);
-  const T_o   = fnum(document.getElementById("T_out").value);
-  const RH_o  = fnum(document.getElementById("RH_out").value);
-  let   V_in  = fnum(document.getElementById("V").value); // m^3/min
-  let   Q_in  = fnum(document.getElementById("Q").value); // kW
+  let T_in  = fnum(document.getElementById("T_in").value);
+  let RH_in = fnum(document.getElementById("RH_in").value);
+  let T_o   = fnum(document.getElementById("T_out").value);
+  let RH_o  = fnum(document.getElementById("RH_out").value);
+  let V_in  = fnum(document.getElementById("V").value); // m^3/min
+  let Q_in  = fnum(document.getElementById("Q").value); // kW
 
-  // 必須チェック
-  if([T_in, RH_in, T_o, RH_o].some(v => v===null)){
-    msg.textContent = "吸込T/φ・冷却T/φは必須です。";
-    return;
-  }
-  if(V_in===null && Q_in===null){
-    msg.textContent = "風量 V または 冷却能力 Q のどちらかを入力してください。";
-    return;
-  }
+  // 未入力の数と種類
+  const fields = {T_in, RH_in, T_out:T_o, RH_out:RH_o, V:V_in, Q:Q_in};
+  const missing = Object.keys(fields).filter(k => fields[k]==null);
+  const missingCount = missing.length;
 
-  // 吸込と冷却の空気性質
-  const IN  = airProps(T_in, RH_in);
-  const OUT = airProps(T_o, RH_o);
+  let solvedNote = "";
 
-  // ṁ, Q, V の相互計算
-  let m_dot = null;
-  let Q_val = Q_in;
-  let V_val = V_in;
+  // --- 未入力が1つなら試みて解く ---
+  if (missingCount === 1){
+    const miss = missing[0];
 
-  // V→ṁ
-  if(V_val !== null){
-    m_dot = (V_val/60.0) / IN.v;   // kg/s
-  }
-  // Qが空なら計算
-  if(Q_val === null){
-    if(m_dot === null){ msg.textContent = "内部エラー: m_dot未定義"; return; }
-    Q_val = m_dot * (IN.h - OUT.h);    // kW
-  }
-  // Vが空なら逆算（Δh=0回避）
-  if(V_val === null){
-    const dH = (IN.h - OUT.h);
-    if(Math.abs(dH) < 1e-9){
-      msg.textContent = "状態が等しいため V を逆算できません（Δh≈0）。";
-      return;
+    // 先に既知側の状態を可能な限り作る（入口・出口）
+    const IN_known  = airProps(T_in, RH_in);
+    const OUT_known = airProps(T_o , RH_o );
+
+    // V/Qどちらかを解く系（代数で可）
+    if (miss === "V" && Q_in!=null && IN_known && OUT_known){
+      const dH = (IN_known.h - OUT_known.h);
+      if (Math.abs(dH) > 1e-12){
+        const m_dot = Q_in / dH;
+        V_in = m_dot * 60.0 * IN_known.v;
+        document.getElementById("V").value = String(V_in);
+        solvedNote += `未入力を計算: V = ${fmt(V_in,1)} m³/min\n`;
+      }
     }
-    m_dot = Q_val / dH;
-    V_val = m_dot * 60.0 * IN.v;       // m^3/min
+    else if (miss === "Q" && V_in!=null && IN_known && OUT_known){
+      const m_dot = (V_in/60.0) / IN_known.v;
+      Q_in = m_dot * (IN_known.h - OUT_known.h);
+      document.getElementById("Q").value = String(Q_in);
+      solvedNote += `未入力を計算: Q = ${fmt(Q_in,1)} kW\n`;
+    }
+    // 入口/出口の T or RH を解く（要 V と Q）
+    else if ((miss==="T_in"||miss==="RH_in"||miss==="T_out"||miss==="RH_out") && V_in!=null && Q_in!=null){
+      // 残っている側の状態を固定
+      // 関数: 与えた未知変数 u に対し f(u) = Q - (V/60)/v_in * (h_in - h_out) = 0
+      const solve_in = (uToIn) => {
+        const f = (u)=>{
+          const IN = uToIn(u); if(!IN) return NaN;
+          const OUT = OUT_known; // 出口は既知
+          if(!OUT) return NaN;
+          const m_dot = (V_in/60.0) / IN.v;
+          return Q_in - m_dot*(IN.h - OUT.h);
+        };
+        return solve_bisect(f, -30, 60); // 入口温度範囲の既定
+      };
+      const solve_in_RH = ()=>{
+        const f = (rh)=>{
+          rh = Math.max(1, Math.min(99, rh));
+          const IN = airProps(T_in, rh); if(!IN) return NaN;
+          const m_dot = (V_in/60.0) / IN.v;
+          return Q_in - m_dot*(IN.h - OUT_known.h);
+        };
+        return solve_bisect(f, 1, 99);
+      };
+      const solve_out = (uToOut) => {
+        const f = (u)=>{
+          const OUT = uToOut(u); if(!OUT) return NaN;
+          const IN = IN_known; // 入口は既知
+          if(!IN) return NaN;
+          const m_dot = (V_in/60.0) / IN.v;
+          return Q_in - m_dot*(IN.h - OUT.h);
+        };
+        return solve_bisect(f, -30, 40); // 出口温度の既定レンジ
+      };
+      const solve_out_RH = ()=>{
+        const f = (rh)=>{
+          rh = Math.max(1, Math.min(99, rh));
+          const OUT = airProps(T_o, rh); if(!OUT) return NaN;
+          const m_dot = (V_in/60.0) / IN_known.v;
+          return Q_in - m_dot*(IN_known.h - OUT.h);
+        };
+        return solve_bisect(f, 1, 99);
+      };
+
+      if (miss==="T_in" && RH_in!=null && OUT_known){
+        const root = solve_in((Tin)=>airProps(Tin, RH_in));
+        if (root!=null){ T_in = root; document.getElementById("T_in").value = String(T_in); solvedNote += `未入力を計算: T_in = ${fmt(T_in,1)} °C\n`; }
+      } else if (miss==="RH_in" && T_in!=null && OUT_known){
+        const root = solve_in_RH();
+        if (root!=null){ RH_in = root; document.getElementById("RH_in").value = String(RH_in); solvedNote += `未入力を計算: RH_in = ${fmt(RH_in,1)} %\n`; }
+      } else if (miss==="T_out" && RH_o!=null && IN_known){
+        const root = solve_out((Tout)=>airProps(Tout, RH_o));
+        if (root!=null){ T_o = root; document.getElementById("T_out").value = String(T_o); solvedNote += `未入力を計算: T_out = ${fmt(T_o,1)} °C\n`; }
+      } else if (miss==="RH_out" && T_o!=null && IN_known){
+        const root = solve_out_RH();
+        if (root!=null){ RH_o = root; document.getElementById("RH_out").value = String(RH_o); solvedNote += `未入力を計算: RH_out = ${fmt(RH_o,1)} %\n`; }
+      }
+    }
+    // 他の組み合わせでは一意に決められない → 何もしない（要求通りエラーは出さない）
   }
 
-  // 除湿量 L/h
-  const L_Lph = (IN.x - OUT.x) * m_dot * 3600.0;  // kg/h ≒ L/h
+  // ---- ここから「可能な範囲だけ」表示 ----
+  const IN  = airProps(T_in, RH_in);
+  const OUT = airProps(T_o , RH_o );
 
-  // 主結果
-  document.getElementById("rV").textContent  = fmt(V_val, 1);
-  document.getElementById("rQ").textContent  = fmt(Q_val, 1);
-  document.getElementById("rL").textContent  = fmt(L_Lph, 1);
-  document.getElementById("rm").textContent  = fmt(m_dot, 4);
+  // 主結果（V, Q, m_dot, L）は計算できるときだけ
+  let m_dot=null, V_val=null, Q_val=null, L_Lph=null;
 
-  // 吸込空気 情報
-  document.getElementById("in_T").textContent  = fmt(IN.Tc, 1);
-  document.getElementById("in_Tw").textContent = fmt(IN.Tw, 1);
-  document.getElementById("in_RH").textContent = fmt(IN.RH, 1);
-  document.getElementById("in_x").textContent  = fmt(IN.x*1000.0, 1); // g/kg
-  document.getElementById("in_Td").textContent = fmt(IN.Td, 1);
-  document.getElementById("in_pv").textContent = fmt(IN.pv, 0);
-  document.getElementById("in_v").textContent  = fmt(IN.v, 4);
-  document.getElementById("in_h").textContent  = fmt(IN.h, 1);
-  document.getElementById("in_mu").textContent = fmt(IN.mu, 1);
-  document.getElementById("in_DI").textContent = fmt(IN.DI, 1);
+  if (IN && OUT){
+    if (V_in!=null){ m_dot = (V_in/60.0) / IN.v; V_val = V_in; }
+    if (Q_in!=null && m_dot!=null){
+      Q_val = m_dot * (IN.h - OUT.h);
+    } else if (Q_in!=null && V_in==null){
+      // V未入力でQだけ→主結果にQだけ表示
+      Q_val = Q_in;
+    }
+    if (V_in==null && Q_in!=null){
+      const dH = (IN.h - OUT.h);
+      if (Math.abs(dH)>1e-12){
+        m_dot = Q_in / dH;
+        V_val = m_dot * 60.0 * IN.v;
+      }
+    }
+    if (IN && OUT && m_dot!=null){
+      L_Lph = (IN.x - OUT.x) * m_dot * 3600.0; // kg/h ≒ L/h
+    }
+  }
 
-  // 冷却空気 情報
-  document.getElementById("out_T").textContent  = fmt(OUT.Tc, 1);
-  document.getElementById("out_Tw").textContent = fmt(OUT.Tw, 1);
-  document.getElementById("out_RH").textContent = fmt(OUT.RH, 1);
-  document.getElementById("out_x").textContent  = fmt(OUT.x*1000.0, 1); // g/kg
-  document.getElementById("out_Td").textContent = fmt(OUT.Td, 1);
-  document.getElementById("out_pv").textContent = fmt(OUT.pv, 0);
-  document.getElementById("out_v").textContent  = fmt(OUT.v, 4);
-  document.getElementById("out_h").textContent  = fmt(OUT.h, 1);
-  document.getElementById("out_mu").textContent = fmt(OUT.mu, 1);
-  document.getElementById("out_DI").textContent = fmt(OUT.DI, 1);
+  // 表示
+  document.getElementById("rV").textContent = V_val!=null ? fmt(V_val,1) : "-";
+  document.getElementById("rQ").textContent = Q_val!=null ? fmt(Q_val,1) : "-";
+  document.getElementById("rL").textContent = L_Lph!=null ? fmt(L_Lph,1) : "-";
+  document.getElementById("rm").textContent = m_dot!=null ? fmt(m_dot,4) : "-";
 
-  outWrap.style.display = "block";
-  msg.style.color = "#065f46";
-  msg.textContent = "計算しました。";
+  fillState("in", IN);
+  fillState("out", OUT);
+
+  outWrap.style.display = (IN || OUT) ? "block" : "none";
+  msg.textContent = solvedNote || "入力された範囲で計算しました。";
 }
 
 /* クリア */
@@ -311,7 +422,6 @@ function clearAll(){
    .forEach(id => document.getElementById(id).textContent = "-");
   const msg = document.getElementById("msg");
   msg.textContent = "";
-  msg.style.color = "#b91c1c";
   document.getElementById("results").style.display = "none";
 }
 
