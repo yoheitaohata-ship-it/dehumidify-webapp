@@ -2,310 +2,322 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>空気線図計算</title>
 <style>
-  :root {
-    --gap: 10px;
-    --label-w: 7.5em; /* 既定ラベル幅（従来） */
-    --unit-w: 3.6em;
-  }
-  body {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-    margin: 16px;
-    line-height: 1.5;
-  }
-  h1 { font-size: 1.25rem; margin: 0 0 12px; }
-  h2 { font-size: 1.05rem; margin: 18px 0 8px; }
-  .card {
-    border: 1px solid #e5e5e5;
-    border-radius: 10px;
-    padding: 12px;
-    margin: 12px 0;
-    box-shadow: 0 1px 2px rgba(0,0,0,.03);
-    background: #fff;
-  }
-  .row {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: var(--gap);
-    align-items: center;
-    margin: 6px 0;
-  }
-  label {
-    min-width: var(--label-w);
-    white-space: nowrap;
-    display: inline-block;
-  }
-  /* ★ 冷却後 相対湿度 RH_out のラベルだけ幅を少し広げる（折り返し防止） */
-  label[for="RH_out"] {
-    min-width: calc(var(--label-w) + 1.3em);
-  }
-  input {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid #d5d5d5;
-    border-radius: 8px;
-    font-size: 16px;
-  }
-  .unit {
-    min-width: var(--unit-w);
-    text-align: center;
-    color: #555;
-  }
-  .grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--gap);
-  }
-  @media (max-width: 560px) {
-    .grid-2 { grid-template-columns: 1fr; }
-  }
-  button {
-    width: 100%;
-    padding: 10px 12px;
-    font-size: 16px;
-    border: none;
-    border-radius: 8px;
-    background: #ff7a90;
-    color: #fff;
-    font-weight: 700;
-  }
-  #msg { color: #c00; margin-top: 8px; min-height: 1.2em; }
-  .kv { display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; }
-  .kv div:nth-child(odd) { color: #555; }
-  .kv div:nth-child(even) { text-align: right; font-variant-numeric: tabular-nums; }
-  .muted { color: #666; font-size: .92em; }
+  :root { --fg:#111; --muted:#666; --bg:#fff; --card:#f6f7f9; --accent:#2266ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; color:var(--fg); background:var(--bg); }
+  header { padding:16px 20px; border-bottom:1px solid #e5e7eb; background:#fff; position:sticky; top:0; z-index:10; }
+  header h1 { margin:0; font-size:18px; }
+  main { max-width:960px; margin:0 auto; padding:16px; }
+  .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
+  @media (min-width:720px){ .grid { grid-template-columns: 1fr 1fr; } }
+  .card { background:var(--card); border:1px solid #e5e7eb; border-radius:12px; padding:12px; }
+  .card h2 { margin:4px 0 10px; font-size:16px; }
+  .row { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; margin-bottom:8px; }
+  .row label { display:block; font-size:13px; color:var(--muted); }
+  input[type="number"] { width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:10px; font-size:16px; }
+  .actions { display:flex; gap:8px; margin:10px 0; }
+  button { cursor:pointer; padding:10px 14px; border-radius:10px; border:1px solid #cbd5e1; background:#fff; font-weight:600; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  #msg { margin:8px 0; color:#b91c1c; font-weight:600; min-height:1.5em; }
+  .result { display:none; }
+  .result h3 { margin:6px 0 6px; font-size:15px; }
+  .kvs { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+  .kv { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:8px 10px; }
+  .kv .k { font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .kv .v { font-variant-numeric: tabular-nums; font-weight:600; }
+  footer { margin:30px 0 10px; text-align:center; color:#9ca3af; font-size:12px; }
 </style>
 </head>
 <body>
-  <h1>空気線図計算</h1>
+  <header>
+    <h1>空気線図計算</h1>
+  </header>
 
-  <div class="card">
-    <h2>入力</h2>
-
-    <!-- 吸込：T/RH 横並び -->
-    <div class="grid-2">
-      <div>
-        <div class="row">
-          <label for="T_in">吸込乾球温度</label>
-          <input id="T_in" type="number" step="0.1" inputmode="decimal" placeholder="例) 27.0">
-          <div class="unit">°C</div>
+  <main>
+    <div class="card">
+      <h2>入力</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>吸込（入口）</h3>
+          <div class="row">
+            <div>
+              <label>乾球温度 T<sub>in</sub> [°C]</label>
+              <input id="T_in" type="number" inputmode="decimal"  />
+            </div>
+            <div>
+              <label>相対湿度 RH<sub>in</sub> [%]</label>
+              <input id="RH_in" type="number" inputmode="decimal" />
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>冷却（出口）</h3>
+          <div class="row">
+            <div>
+              <label>乾球温度 T<sub>out</sub> [°C]</label>
+              <input id="T_out" type="number" inputmode="decimal"  />
+            </div>
+            <div>
+              <label>相対湿度 RH<sub>out</sub>[%]</label>
+              <input id="RH_out" type="number" inputmode="decimal"  />
+            </div>
+          </div>
         </div>
       </div>
-      <div>
-        <div class="row">
-          <label for="RH_in">吸込相対湿度</label>
-          <input id="RH_in" type="number" step="0.1" inputmode="decimal" placeholder="例) 50">
-          <div class="unit">%</div>
+
+      <div class="grid" style="margin-top:8px;">
+        <div class="card">
+          <h3>任意入力（どちらか一方でOK）</h3>
+          <div class="row">
+            <div>
+              <label>風量 V [m³/min]</label>
+              <input id="V" type="number" inputmode="decimal" />
+            </div>
+            <div>
+              <label>冷却能力 Q [kW]</label>
+              <input id="Q" type="number" inputmode="decimal" />
+            </div>
+          </div>
+          <div class="actions">
+            <button id="calc" class="primary">計算する</button>
+            <button id="clear">クリア</button>
+          </div>
+          <div id="msg"></div>
+        </div>
+
+        <div class="card">
+          <h3>主な結果</h3>
+          <div class="kvs">
+            <div class="kv"><div class="k">風量 V [m³/min]</div><div class="v" id="rV">-</div></div>
+            <div class="kv"><div class="k">冷却能力 Q [kW]</div><div class="v" id="rQ">-</div></div>
+            <div class="kv"><div class="k">除湿量 L [L/h]</div><div class="v" id="rL">-</div></div>
+            <div class="kv"><div class="k">質量流量 ṁ [kg/s]</div><div class="v" id="rm">-</div></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 冷却後：T/RH 横並び -->
-    <div class="grid-2">
-      <div>
-        <div class="row">
-          <label for="T_out">冷却後乾球温度</label>
-          <input id="T_out" type="number" step="0.1" inputmode="decimal" placeholder="例) 14.0">
-          <div class="unit">°C</div>
+    <div id="results" class="result" style="margin-top:12px;">
+      <div class="grid">
+        <div class="card">
+          <h2>吸込空気 情報</h2>
+          <div class="kvs">
+            <div class="kv"><div class="k">乾球温度 [°C]</div><div class="v" id="in_T">-</div></div>
+            <div class="kv"><div class="k">湿球温度(近似) [°C]</div><div class="v" id="in_Tw">-</div></div>
+            <div class="kv"><div class="k">相対湿度 [%]</div><div class="v" id="in_RH">-</div></div>
+            <div class="kv"><div class="k">絶対湿度 x [g/kg(DA)]</div><div class="v" id="in_x">-</div></div>
+            <div class="kv"><div class="k">露点温度 [°C]</div><div class="v" id="in_Td">-</div></div>
+            <div class="kv"><div class="k">水蒸気分圧 pv [Pa]</div><div class="v" id="in_pv">-</div></div>
+            <div class="kv"><div class="k">比容 v [m³/kg]</div><div class="v" id="in_v">-</div></div>
+            <div class="kv"><div class="k">比エンタルピ h [kJ/kg]</div><div class="v" id="in_h">-</div></div>
+            <div class="kv"><div class="k">飽和度 μ [%]</div><div class="v" id="in_mu">-</div></div>
+            <div class="kv"><div class="k">不快指数 DI</div><div class="v" id="in_DI">-</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>冷却空気 情報</h2>
+          <div class="kvs">
+            <div class="kv"><div class="k">乾球温度 [°C]</div><div class="v" id="out_T">-</div></div>
+            <div class="kv"><div class="k">湿球温度(近似) [°C]</div><div class="v" id="out_Tw">-</div></div>
+            <div class="kv"><div class="k">相対湿度 [%]</div><div class="v" id="out_RH">-</div></div>
+            <div class="kv"><div class="k">絶対湿度 x [g/kg(DA)]</div><div class="v" id="out_x">-</div></div>
+            <div class="kv"><div class="k">露点温度 [°C]</div><div class="v" id="out_Td">-</div></div>
+            <div class="kv"><div class="k">水蒸気分圧 pv [Pa]</div><div class="v" id="out_pv">-</div></div>
+            <div class="kv"><div class="k">比容 v [m³/kg]</div><div class="v" id="out_v">-</div></div>
+            <div class="kv"><div class="k">比エンタルピ h [kJ/kg]</div><div class="v" id="out_h">-</div></div>
+            <div class="kv"><div class="k">飽和度 μ [%]</div><div class="v" id="out_mu">-</div></div>
+            <div class="kv"><div class="k">不快指数 DI</div><div class="v" id="out_DI">-</div></div>
+          </div>
         </div>
       </div>
-      <div>
-        <div class="row">
-          <label for="RH_out">冷却後相対湿度 RH_out</label>
-          <input id="RH_out" type="number" step="0.1" inputmode="decimal" placeholder="例) 95">
-          <div class="unit">%</div>
-        </div>
-      </div>
     </div>
 
-    <!-- 風量/冷却能力 横並び（どちらか一方あれば可） -->
-    <div class="grid-2">
-      <div>
-        <div class="row">
-          <label for="V">風量</label>
-          <input id="V" type="number" step="0.01" inputmode="decimal" placeholder="任意">
-          <div class="unit">m³/min</div>
-        </div>
-      </div>
-      <div>
-        <div class="row">
-          <label for="Q">冷却能力</label>
-          <input id="Q" type="number" step="0.1" inputmode="decimal" placeholder="任意">
-          <div class="unit">kW</div>
-        </div>
-      </div>
-    </div>
-
-    <button id="calc">計算</button>
-    <div id="msg"></div>
-  </div>
-
-  <div id="results" class="card" style="display:none">
-    <h2>計算結果</h2>
-    <div class="kv">
-      <div>風量 V</div><div id="rV">-</div>
-      <div>冷却能力 Q</div><div id="rQ">-</div>
-      <div>除湿量</div><div id="rL">-</div>
-      <div>質量流量 ṁ</div><div id="rm">-</div>
-    </div>
-    <div class="muted" style="margin-top:6px">※ 除湿量は水密度≒1 kg/Lとして L/h に換算</div>
-  </div>
-
-  <div id="air_in" class="card" style="display:none">
-    <h2>吸込空気情報</h2>
-    <div class="kv">
-      <div>絶対湿度 x</div><div id="xin">-</div>
-      <div>比容積 v</div><div id="vin">-</div>
-      <div>比エンタルピ h</div><div id="hin">-</div>
-      <div>露点温度 Td</div><div id="tdin">-</div>
-      <div>水蒸気分圧 pv</div><div id="pvin">-</div>
-    </div>
-  </div>
-
-  <div id="air_out" class="card" style="display:none">
-    <h2>冷却空気情報</h2>
-    <div class="kv">
-      <div>絶対湿度 x</div><div id="xout">-</div>
-      <div>比容積 v</div><div id="vout">-</div>
-      <div>比エンタルピ h</div><div id="hout">-</div>
-      <div>露点温度 Td</div><div id="tdout">-</div>
-      <div>水蒸気分圧 pv</div><div id="pvout">-</div>
-    </div>
-  </div>
+    <footer>© Dehumidify Lite</footer>
+  </main>
 
 <script>
-  // ---- 物性・補助関数（kJ 系）----
-  const P_ATM = 101.325;      // kPa
-  const R_AIR = 0.287;        // kJ/(kg·K)
-  const C_A   = 1.006;        // kJ/(kg·K)
-  const C_W   = 1.86;         // kJ/(kg·K)
-  const H_W   = 2501.0;       // kJ/kg
+/* ---- 定数（kJ系） ---- */
+const P_ATM = 101.325;   // kPa
+const R_AIR = 0.287;     // kJ/(kg·K)
+const C_A   = 1.006;     // kJ/(kg·K)
+const C_W   = 1.86;      // kJ/(kg·K)
+const H_W   = 2501.0;    // kJ/kg
 
-  // Tetens 近似（飽和水蒸気圧, kPa）
-  function ps(Tc){ return 0.61078 * Math.exp((17.27 * Tc) / (Tc + 237.3)); }
+/* 飽和水蒸気圧（Tetens式, kPa） */
+function ps(Tc){ return 0.61078 * Math.exp((17.27*Tc)/(Tc+237.3)); }
 
-  // 相対湿度(0-1) → 絶対湿度 x[kg/kg(DA)]
-  function x_from_phi(phi, Tc){
-    const pv = phi * ps(Tc);
-    return 0.622 * pv / (P_ATM - pv);
+/* 相対湿度→絶対湿度 x (kg/kg, 乾き空気基準) */
+function x_from_phi(phi, Tc){
+  const pv = phi * ps(Tc);                 // kPa
+  return 0.622 * pv / (P_ATM - pv);        // kg/kg
+}
+
+/* 比エンタルピ（kJ/kg(DA)）*/
+function h_moist_air(Tc, x){
+  return C_A*Tc + x*(H_W + C_W*Tc);
+}
+
+/* 比容（m^3/kg(DA)）*/
+function v_specific(Tc, x){
+  return (R_AIR * (Tc + 273.15) / P_ATM) * (1.0 + 1.6078*x);
+}
+
+/* 露点（°C）: pv = phi*ps(T) を用いて逆算（Magnus-Tetens 逆式）*/
+function dew_point(phi, Tc){
+  const pv_kPa = phi * ps(Tc);
+  const y = Math.log(pv_kPa / 0.61078);
+  return (237.3 * y) / (17.27 - y);
+}
+
+/* 湿球温度（Stull 近似, °C, RHは%）*/
+function wet_bulb_stull(Tc, RH){
+  const rh = Math.max(0, Math.min(100, RH));
+  return Tc * Math.atan(0.151977*Math.sqrt(rh+8.313659))
+       + Math.atan(Tc + rh) - Math.atan(rh - 1.676331)
+       + 0.00391838*Math.pow(rh,1.5)*Math.atan(0.023101*rh) - 4.686035;
+}
+
+/* 飽和度 μ = x/xs(T) × 100 */
+function saturation_degree(Tc, x){
+  const xs = x_from_phi(1.0, Tc);
+  return (x / xs) * 100.0;
+}
+
+/* 不快指数（簡易）*/
+function discomfort_index(Tc, RH){
+  return 0.81*Tc + 0.01*RH*(0.99*Tc - 14.3) + 46.3;
+}
+
+/* 安全数値変換 */
+function fnum(s){ const v = Number(s); return Number.isFinite(v) ? v : null; }
+
+/* 表示フォーマット */
+function fmt(x, n=1){ return (x==null || !Number.isFinite(x)) ? "-" : x.toFixed(n); }
+
+/* 1状態の空気性質まとめを計算 */
+function airProps(Tc, RHpct){
+  const phi = RHpct/100.0;
+  const x   = x_from_phi(phi, Tc);          // kg/kg
+  const h   = h_moist_air(Tc, x);
+  const v   = v_specific(Tc, x);
+  const Td  = dew_point(phi, Tc);
+  const Tw  = wet_bulb_stull(Tc, RHpct);
+  const pv  = phi*ps(Tc)*1000.0;            // Pa
+  const mu  = saturation_degree(Tc, x);
+  const DI  = discomfort_index(Tc, RHpct);
+  return { Tc, RH: RHpct, x, h, v, Td, Tw, pv, mu, DI };
+}
+
+/* メイン計算 */
+function compute(){
+  const msg = document.getElementById("msg");
+  const outWrap = document.getElementById("results");
+  msg.textContent = "";
+  outWrap.style.display = "none";
+
+  const T_in  = fnum(document.getElementById("T_in").value);
+  const RH_in = fnum(document.getElementById("RH_in").value);
+  const T_o   = fnum(document.getElementById("T_out").value);
+  const RH_o  = fnum(document.getElementById("RH_out").value);
+  let   V_in  = fnum(document.getElementById("V").value); // m^3/min
+  let   Q_in  = fnum(document.getElementById("Q").value); // kW
+
+  // 必須チェック
+  if([T_in, RH_in, T_o, RH_o].some(v => v===null)){
+    msg.textContent = "吸込T/φ・冷却T/φは必須です。";
+    return;
+  }
+  if(V_in===null && Q_in===null){
+    msg.textContent = "風量 V または 冷却能力 Q のどちらかを入力してください。";
+    return;
   }
 
-  // 比エンタルピ h[kJ/kg(DA)]
-  function h_moist_air(Tc, x){
-    return C_A * Tc + x * (H_W + C_W * Tc);
+  // 吸込と冷却の空気性質
+  const IN  = airProps(T_in, RH_in);
+  const OUT = airProps(T_o, RH_o);
+
+  // ṁ, Q, V の相互計算
+  let m_dot = null;
+  let Q_val = Q_in;
+  let V_val = V_in;
+
+  // V→ṁ
+  if(V_val !== null){
+    m_dot = (V_val/60.0) / IN.v;   // kg/s
   }
-
-  // 比容積 v[m³/kg(DA)]
-  function v_specific(Tc, x){
-    return (R_AIR * (Tc + 273.15) / P_ATM) * (1 + 1.6078 * x);
+  // Qが空なら計算
+  if(Q_val === null){
+    if(m_dot === null){ msg.textContent = "内部エラー: m_dot未定義"; return; }
+    Q_val = m_dot * (IN.h - OUT.h);    // kW
   }
-
-  // 露点温度（RH, T から求まる水蒸気分圧を使った近似）
-  function dew_point_from(Tc, phi){ // phi: 0-1
-    const pv = phi * ps(Tc);        // kPa
-    const a = Math.log(pv / 0.61078);
-    return (237.3 * a) / (17.27 - a);
-  }
-
-  // 安全数値化
-  const fnum = v => {
-    if (v === null || v === undefined || v === "") return null;
-    const x = Number(v);
-    return Number.isFinite(x) ? x : null;
-  };
-
-  // フォーマット
-  const fmt = (x, n=1) => (Number.isFinite(x) ? x.toFixed(n) : "-");
-
-  function compute(){
-    const msg = document.getElementById("msg");
-    const out = document.getElementById("results");
-    const cardIn  = document.getElementById("air_in");
-    const cardOut = document.getElementById("air_out");
-    msg.textContent = "";
-    out.style.display = "none";
-    cardIn.style.display = "none";
-    cardOut.style.display = "none";
-
-    const T_in  = fnum(document.getElementById("T_in").value);
-    const RH_in = fnum(document.getElementById("RH_in").value);
-    const T_o   = fnum(document.getElementById("T_out").value);
-    const RH_o  = fnum(document.getElementById("RH_out").value);
-    let   V_in  = fnum(document.getElementById("V").value); // m³/min
-    let   Q_in  = fnum(document.getElementById("Q").value); // kW
-
-    // 必須チェック
-    if ([T_in, RH_in, T_o, RH_o].some(v => v === null)){
-      msg.textContent = "吸込T/φ・冷却後T/φをすべて入力してください。";
+  // Vが空なら逆算（Δh=0回避）
+  if(V_val === null){
+    const dH = (IN.h - OUT.h);
+    if(Math.abs(dH) < 1e-9){
+      msg.textContent = "状態が等しいため V を逆算できません（Δh≈0）。";
       return;
     }
-    if (V_in === null && Q_in === null){
-      msg.textContent = "風量 V または 冷却能力 Q のどちらかを入力してください。";
-      return;
-    }
-
-    // ---- 吸込状態 ----
-    const phi_in = RH_in / 100.0;
-    const x_in = x_from_phi(phi_in, T_in);
-    const h_in = h_moist_air(T_in, x_in);
-    const v_in = v_specific(T_in, x_in);
-    const Td_in = dew_point_from(T_in, phi_in);
-    const pv_in = phi_in * ps(T_in); // kPa
-
-    // ---- 冷却後状態 ----
-    const phi_o = RH_o / 100.0;
-    const x_o = x_from_phi(phi_o, T_o);
-    const h_o = h_moist_air(T_o, x_o);
-    const v_o = v_specific(T_o, x_o);
-    const Td_o = dew_point_from(T_o, phi_o);
-    const pv_o = phi_o * ps(T_o); // kPa
-
-    // ---- 連成計算（ṁ, Q, V）----
-    let m_dot = null; // kg/s
-    if (V_in !== null){
-      m_dot = (V_in / 60.0) / v_in;
-    }
-    if (Q_in === null){
-      if (m_dot === null){ msg.textContent = "内部エラー: m_dot 未定義"; return; }
-      Q_in = m_dot * (h_in - h_o); // kW
-    }
-    if (V_in === null){
-      const dh = (h_in - h_o);
-      if (Math.abs(dh) < 1e-9){ msg.textContent = "状態が等しいため V を逆算できません（Δh≈0）。"; return; }
-      m_dot = Q_in / dh;
-      V_in = m_dot * 60.0 * v_in;
-    }
-
-    // 除湿量 L/h（kg/h ≒ L/h）
-    const L_Lph = (x_in - x_o) * m_dot * 3600.0;
-
-    // ---- 出力 ----
-    document.getElementById("rV").textContent  = fmt(V_in, 1) + " m³/min";
-    document.getElementById("rQ").textContent  = fmt(Q_in, 1) + " kW";
-    document.getElementById("rL").textContent  = fmt(L_Lph, 1) + " L/h";
-    document.getElementById("rm").textContent  = fmt(m_dot, 4) + " kg/s";
-    out.style.display = "block";
-
-    // 吸込空気情報
-    document.getElementById("xin").textContent  = fmt(x_in, 4) + " kg/kg(DA)";
-    document.getElementById("vin").textContent  = fmt(v_in, 4) + " m³/kg";
-    document.getElementById("hin").textContent  = fmt(h_in, 1) + " kJ/kg";
-    document.getElementById("tdin").textContent = fmt(Td_in, 1) + " °C";
-    document.getElementById("pvin").textContent = fmt(pv_in, 4) + " kPa";
-    cardIn.style.display = "block";
-
-    // 冷却空気情報
-    document.getElementById("xout").textContent  = fmt(x_o, 4) + " kg/kg(DA)";
-    document.getElementById("vout").textContent  = fmt(v_o, 4) + " m³/kg";
-    document.getElementById("hout").textContent  = fmt(h_o, 1) + " kJ/kg";
-    document.getElementById("tdout").textContent = fmt(Td_o, 1) + " °C";
-    document.getElementById("pvout").textContent = fmt(pv_o, 4) + " kPa";
-    cardOut.style.display = "block";
+    m_dot = Q_val / dH;
+    V_val = m_dot * 60.0 * IN.v;       // m^3/min
   }
 
-  document.getElementById("calc").addEventListener("click", compute);
+  // 除湿量 L/h
+  const L_Lph = (IN.x - OUT.x) * m_dot * 3600.0;  // kg/h ≒ L/h
+
+  // 主結果
+  document.getElementById("rV").textContent  = fmt(V_val, 1);
+  document.getElementById("rQ").textContent  = fmt(Q_val, 1);
+  document.getElementById("rL").textContent  = fmt(L_Lph, 1);
+  document.getElementById("rm").textContent  = fmt(m_dot, 4);
+
+  // 吸込空気 情報
+  document.getElementById("in_T").textContent  = fmt(IN.Tc, 1);
+  document.getElementById("in_Tw").textContent = fmt(IN.Tw, 1);
+  document.getElementById("in_RH").textContent = fmt(IN.RH, 1);
+  document.getElementById("in_x").textContent  = fmt(IN.x*1000.0, 1); // g/kg
+  document.getElementById("in_Td").textContent = fmt(IN.Td, 1);
+  document.getElementById("in_pv").textContent = fmt(IN.pv, 0);
+  document.getElementById("in_v").textContent  = fmt(IN.v, 4);
+  document.getElementById("in_h").textContent  = fmt(IN.h, 1);
+  document.getElementById("in_mu").textContent = fmt(IN.mu, 1);
+  document.getElementById("in_DI").textContent = fmt(IN.DI, 1);
+
+  // 冷却空気 情報
+  document.getElementById("out_T").textContent  = fmt(OUT.Tc, 1);
+  document.getElementById("out_Tw").textContent = fmt(OUT.Tw, 1);
+  document.getElementById("out_RH").textContent = fmt(OUT.RH, 1);
+  document.getElementById("out_x").textContent  = fmt(OUT.x*1000.0, 1); // g/kg
+  document.getElementById("out_Td").textContent = fmt(OUT.Td, 1);
+  document.getElementById("out_pv").textContent = fmt(OUT.pv, 0);
+  document.getElementById("out_v").textContent  = fmt(OUT.v, 4);
+  document.getElementById("out_h").textContent  = fmt(OUT.h, 1);
+  document.getElementById("out_mu").textContent = fmt(OUT.mu, 1);
+  document.getElementById("out_DI").textContent = fmt(OUT.DI, 1);
+
+  outWrap.style.display = "block";
+  msg.style.color = "#065f46";
+  msg.textContent = "計算しました。";
+}
+
+/* クリア */
+function clearAll(){
+  ["T_in","RH_in","T_out","RH_out","V","Q"].forEach(id => document.getElementById(id).value = "");
+  ["rV","rQ","rL","rm","in_T","in_Tw","in_RH","in_x","in_Td","in_pv","in_v","in_h","in_mu","in_DI",
+   "out_T","out_Tw","out_RH","out_x","out_Td","out_pv","out_v","out_h","out_mu","out_DI"]
+   .forEach(id => document.getElementById(id).textContent = "-");
+  const msg = document.getElementById("msg");
+  msg.textContent = "";
+  msg.style.color = "#b91c1c";
+  document.getElementById("results").style.display = "none";
+}
+
+/* イベント */
+document.getElementById("calc").addEventListener("click", compute);
+document.getElementById("clear").addEventListener("click", clearAll);
 </script>
 </body>
 </html>
