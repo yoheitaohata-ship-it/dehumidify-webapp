@@ -181,8 +181,15 @@ function wet_bulb_stull(Tc, RH){
 function saturation_degree(Tc, x){ return (x/x_from_phi(1.0, Tc))*100; }
 function discomfort_index(Tc, RH){ return 0.81*Tc + 0.01*RH*(0.99*Tc - 14.3) + 46.3; }
 
-function fnum(s){ const v=Number(s); return Number.isFinite(v)?v:null; }
-function fmt(x,n=1){ return (x==null||!Number.isFinite(x))? "-": x.toFixed(n); }
+function fnum(raw){
+  if (raw == null) return null;
+  let t = String(raw).trim();
+  if (t === "") return null;              // ← 空は null（未入力）
+  t = toHalfWidthDigits(t);               // ← 全角数字を半角に
+  t = t.replace(/,/g, ".");               // ← 1,5 → 1.5
+  const v = Number(t);
+  return Number.isFinite(v) ? v : null;   // ← 数値化できなければ null
+}function fmt(x,n=1){ return (x==null||!Number.isFinite(x))? "-": x.toFixed(n); }
 
 function airProps(Tc, RHpct){
   if (Tc==null || RHpct==null) return null;
