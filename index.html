@@ -147,42 +147,30 @@ const C_A   = 1.006;     // kJ/(kg·K)
 const C_W   = 1.86;      // kJ/(kg·K)
 const H_W   = 2501.0;    // kJ/kg
 
-/* 飽和水蒸気圧（Tetens式, kPa） */
-function ps(Tc){ return 0.61078 * Math.exp((17.27*Tc)/(Tc+237.3)); }
+/* --- 基本式 --- */
+function ps(Tc){ return 0.61078 * Math.exp((17.27*Tc)/(Tc+237.3)); } // kPa
 
-/* 相対湿度→絶対湿度 x (kg/kg, 乾き空気基準) */
 function x_from_phi(phi, Tc){
-  phi = Math.max(0.001, Math.min(0.999, phi));
-  const pv = phi * ps(Tc);                 // kPa
-  return 0.622 * pv / (P_ATM - pv);        // kg/kg
+  const ph = Math.max(0.001, Math.min(0.999, phi));
+  const pv = ph * ps(Tc);                   // kPa
+  return 0.622 * pv / (P_ATM - pv);         // kg/kg(DA)
 }
 
-/* x・T から相対湿度 phi を逆算 */
 function phi_from_x_T(x, Tc){
-  x = Math.max(1e-6, x);
-  const pv = (x * P_ATM) / (0.622 + x);    // kPa
+  const xx = Math.max(1e-9, x);
+  const pv = (xx * P_ATM) / (0.622 + xx);   // kPa
   return Math.max(0.0, Math.min(1.0, pv / ps(Tc)));
 }
 
-/* 比エンタルピ（kJ/kg(DA)）*/
-function h_moist_air(Tc, x){
-  return C_A*Tc + x*(H_W + C_W*Tc);
-}
+function h_moist_air(Tc, x){ return C_A*Tc + x*(H_W + C_W*Tc); }   // kJ/kg
+function v_specific(Tc, x){ return (R_AIR*(Tc+273.15)/P_ATM)*(1+1.6078*x); } // m^3/kg
 
-/* 比容（m^3/kg(DA)）*/
-function v_specific(Tc, x){
-  return (R_AIR * (Tc + 273.15) / P_ATM) * (1.0 + 1.6078*x);
-}
-
-/* 露点（°C）: pv = phi*ps(T) を用いて逆算（Magnus-Tetens 逆式）*/
 function dew_point(phi, Tc){
-  phi = Math.max(0.001, Math.min(0.999, phi));
-  const pv_kPa = phi * ps(Tc);
-  const y = Math.log(pv_kPa / 0.61078);
+  const ph = Math.max(0.001, Math.min(0.999, phi));
+  const y = Math.log((ph*ps(Tc)) / 0.61078);
   return (237.3 * y) / (17.27 - y);
 }
 
-/* 湿球温度（Stull 近似, °C, RHは%）*/
 function wet_bulb_stull(Tc, RH){
   const rh = Math.max(0, Math.min(100, RH));
   return Tc * Math.atan(0.151977*Math.sqrt(rh+8.313659))
@@ -190,77 +178,57 @@ function wet_bulb_stull(Tc, RH){
        + 0.00391838*Math.pow(rh,1.5)*Math.atan(0.023101*rh) - 4.686035;
 }
 
-/* 飽和度 μ = x/xs(T) × 100 */
-function saturation_degree(Tc, x){
-  const xs = x_from_phi(1.0, Tc);
-  return (x / xs) * 100.0;
-}
+function saturation_degree(Tc, x){ return (x/x_from_phi(1.0, Tc))*100; }
+function discomfort_index(Tc, RH){ return 0.81*Tc + 0.01*RH*(0.99*Tc - 14.3) + 46.3; }
 
-/* 不快指数（簡易）*/
-function discomfort_index(Tc, RH){
-  return 0.81*Tc + 0.01*RH*(0.99*Tc - 14.3) + 46.3;
-}
+function fnum(s){ const v=Number(s); return Number.isFinite(v)?v:null; }
+function fmt(x,n=1){ return (x==null||!Number.isFinite(x))? "-": x.toFixed(n); }
 
-/* 安全数値変換 */
-function fnum(s){ const v = Number(s); return Number.isFinite(v) ? v : null; }
-
-/* 表示フォーマット */
-function fmt(x, n=1){ return (x==null || !Number.isFinite(x)) ? "-" : x.toFixed(n); }
-
-/* 1状態の空気性質まとめを計算 */
 function airProps(Tc, RHpct){
   if (Tc==null || RHpct==null) return null;
   const phi = Math.max(0.001, Math.min(0.999, RHpct/100.0));
-  const x   = x_from_phi(phi, Tc);          // kg/kg
-  const h   = h_moist_air(Tc, x);
-  const v   = v_specific(Tc, x);
-  const Td  = dew_point(phi, Tc);
-  const Tw  = wet_bulb_stull(Tc, RHpct);
-  const pv  = phi*ps(Tc)*1000.0;            // Pa
-  const mu  = saturation_degree(Tc, x);
-  const DI  = discomfort_index(Tc, RHpct);
-  return { Tc, RH: RHpct, x, h, v, Td, Tw, pv, mu, DI };
+  const x = x_from_phi(phi, Tc);
+  const h = h_moist_air(Tc, x);
+  const v = v_specific(Tc, x);
+  const Td = dew_point(phi, Tc);
+  const Tw = wet_bulb_stull(Tc, RHpct);
+  const pv = phi*ps(Tc)*1000.0; // Pa
+  const mu = saturation_degree(Tc, x);
+  const DI = discomfort_index(Tc, RHpct);
+  return { Tc, RH:RHpct, x, h, v, Td, Tw, pv, mu, DI };
 }
 
-/* 単変数の2分法ソルバ */
+/* --- 汎用2分法（符号反転区間を自動スキャン） --- */
 function solve_bisect(f, a, b, tol=1e-6, maxit=80){
-  let fa = f(a), fb = f(b);
+  let fa=f(a), fb=f(b);
   if (!Number.isFinite(fa) || !Number.isFinite(fb)) return null;
-  if (fa*fb>0){ // 端点同符号→スキャンして符号反転区間を探す
-    const N=40; let left=a; let fleft=fa;
+  if (fa*fb>0){
+    const N=60; let left=a, fleft=fa;
     for(let i=1;i<=N;i++){
-      const right = a + (b-a)*i/N;
-      const fright = f(right);
-      if (!Number.isFinite(fright)) return null;
+      const right=a+(b-a)*i/N, fright=f(right);
+      if(!Number.isFinite(fright)) return null;
       if (fleft*fright<=0){ a=left; b=right; fa=fleft; fb=fright; break; }
-      left = right; fleft = fright;
+      left=right; fleft=fright;
     }
     if (fa*fb>0) return null;
   }
   for(let i=0;i<maxit;i++){
-    const m = 0.5*(a+b);
-    const fm = f(m);
-    if (!Number.isFinite(fm)) return null;
-    if (Math.abs(fm)<tol || Math.abs(b-a)<tol) return m;
-    if (fa*fm<=0){ b=m; fb=fm; } else { a=m; fa=fm; }
+    const m=0.5*(a+b), fm=f(m);
+    if(!Number.isFinite(fm)) return null;
+    if(Math.abs(fm)<tol||Math.abs(b-a)<tol) return m;
+    if(fa*fm<=0){ b=m; fb=fm; } else { a=m; fa=fm; }
   }
   return 0.5*(a+b);
 }
 
-/* 主表示の充填（propsがnullならスキップ） */
+/* ---- UI反映 ---- */
 function fillState(prefix, P){
-  if(!P){
-    ["T","Tw","RH","x","Td","pv","v","h","mu","DI"].forEach(k=>{
-      const id = `${prefix}_${k}`;
-      const el = document.getElementById(id);
-      if(el) el.textContent = "-";
-    });
-    return;
-  }
+  const ids = ["T","Tw","RH","x","Td","pv","v","h","mu","DI"];
+  if(!P){ ids.forEach(k=>{ const el=document.getElementById(`${prefix}_${k}`); if(el) el.textContent="-"; }); return; }
   document.getElementById(`${prefix}_T`).textContent  = fmt(P.Tc, 1);
   document.getElementById(`${prefix}_Tw`).textContent = fmt(P.Tw, 1);
   document.getElementById(`${prefix}_RH`).textContent = fmt(P.RH, 1);
-  document.getElementById(`${prefix}_x`).textContent  = fmt(P.x*1000.0, 1); // g/kg
+  document.getElementById(`${prefix}_x`).textContent  = fmt(P.x*1000.0, 1);
   document.getElementById(`${prefix}_Td`).textContent = fmt(P.Td, 1);
   document.getElementById(`${prefix}_pv`).textContent = fmt(P.pv, 0);
   document.getElementById(`${prefix}_v`).textContent  = fmt(P.v, 4);
@@ -269,7 +237,7 @@ function fillState(prefix, P){
   document.getElementById(`${prefix}_DI`).textContent = fmt(P.DI, 1);
 }
 
-/* メイン計算 */
+/* ---- メイン計算 ---- */
 function compute(){
   const msg = document.getElementById("msg");
   const outWrap = document.getElementById("results");
@@ -283,134 +251,120 @@ function compute(){
   let V_in  = fnum(document.getElementById("V").value); // m^3/min
   let Q_in  = fnum(document.getElementById("Q").value); // kW
 
-  // 未入力の数と種類
   const fields = {T_in, RH_in, T_out:T_o, RH_out:RH_o, V:V_in, Q:Q_in};
   const missing = Object.keys(fields).filter(k => fields[k]==null);
-  const missingCount = missing.length;
-
   let solvedNote = "";
 
-  // --- 未入力が1つなら試みて解く ---
-  if (missingCount === 1){
+  /* ---- 5/6なら未知1個を解く ---- */
+  if (missing.length === 1){
     const miss = missing[0];
 
-    // 先に既知側の状態を可能な限り作る（入口・出口）
-    const IN_known  = airProps(T_in, RH_in);
-    const OUT_known = airProps(T_o , RH_o );
+    // 入口・出口の既知側を用意（未知側は後で関数で与える）
+    const IN_known  = (T_in!=null && RH_in!=null) ? airProps(T_in, RH_in) : null;
+    const OUT_known = (T_o !=null && RH_o !=null) ? airProps(T_o , RH_o ) : null;
 
-    // V/Qどちらかを解く系（代数で可）
-    if (miss === "V" && Q_in!=null && IN_known && OUT_known){
+    // (1) V or Q が未知（もう一方とIN/OUTが既知なら代数でOK）
+    if (miss==="V" && Q_in!=null && IN_known && OUT_known){
       const dH = (IN_known.h - OUT_known.h);
-      if (Math.abs(dH) > 1e-12){
+      if (Math.abs(dH)>1e-12){
         const m_dot = Q_in / dH;
         V_in = m_dot * 60.0 * IN_known.v;
         document.getElementById("V").value = String(V_in);
         solvedNote += `未入力を計算: V = ${fmt(V_in,1)} m³/min\n`;
       }
-    }
-    else if (miss === "Q" && V_in!=null && IN_known && OUT_known){
-      const m_dot = (V_in/60.0) / IN_known.v;
+    } else if (miss==="Q" && V_in!=null && IN_known && OUT_known){
+      const m_dot = (V_in/60.0)/IN_known.v;
       Q_in = m_dot * (IN_known.h - OUT_known.h);
       document.getElementById("Q").value = String(Q_in);
       solvedNote += `未入力を計算: Q = ${fmt(Q_in,1)} kW\n`;
     }
-    // 入口/出口の T or RH を解く（要 V と Q）
-    else if ((miss==="T_in"||miss==="RH_in"||miss==="T_out"||miss==="RH_out") && V_in!=null && Q_in!=null){
-      // 残っている側の状態を固定
-      // 関数: 与えた未知変数 u に対し f(u) = Q - (V/60)/v_in * (h_in - h_out) = 0
-      const solve_in = (uToIn) => {
-        const f = (u)=>{
-          const IN = uToIn(u); if(!IN) return NaN;
-          const OUT = OUT_known; // 出口は既知
-          if(!OUT) return NaN;
-          const m_dot = (V_in/60.0) / IN.v;
-          return Q_in - m_dot*(IN.h - OUT.h);
-        };
-        return solve_bisect(f, -30, 60); // 入口温度範囲の既定
-      };
-      const solve_in_RH = ()=>{
-        const f = (rh)=>{
-          rh = Math.max(1, Math.min(99, rh));
-          const IN = airProps(T_in, rh); if(!IN) return NaN;
-          const m_dot = (V_in/60.0) / IN.v;
+
+    // (2) T_in / RH_in を解く（V & Q 必須、OUT既知）
+    else if ((miss==="T_in"||miss==="RH_in") && V_in!=null && Q_in!=null && OUT_known){
+      if (miss==="T_in" && RH_in!=null){
+        const f = (Tin)=>{
+          const IN = airProps(Tin, RH_in); if(!IN) return NaN;
+          const m_dot = (V_in/60.0)/IN.v;
           return Q_in - m_dot*(IN.h - OUT_known.h);
         };
-        return solve_bisect(f, 1, 99);
-      };
-      const solve_out = (uToOut) => {
-        const f = (u)=>{
-          const OUT = uToOut(u); if(!OUT) return NaN;
-          const IN = IN_known; // 入口は既知
-          if(!IN) return NaN;
-          const m_dot = (V_in/60.0) / IN.v;
-          return Q_in - m_dot*(IN.h - OUT.h);
-        };
-        return solve_bisect(f, -30, 40); // 出口温度の既定レンジ
-      };
-      const solve_out_RH = ()=>{
+        const root = solve_bisect(f, -30, 60);
+        if (root!=null){ T_in=root; document.getElementById("T_in").value=String(T_in); solvedNote += `未入力を計算: T_in = ${fmt(T_in,1)} °C\n`; }
+      } else if (miss==="RH_in" && T_in!=null){
         const f = (rh)=>{
-          rh = Math.max(1, Math.min(99, rh));
-          const OUT = airProps(T_o, rh); if(!OUT) return NaN;
-          const m_dot = (V_in/60.0) / IN_known.v;
+          const RH = Math.max(1, Math.min(99, rh));
+          const IN = airProps(T_in, RH); if(!IN) return NaN;
+          const m_dot = (V_in/60.0)/IN.v;
+          return Q_in - m_dot*(IN.h - OUT_known.h);
+        };
+        const root = solve_bisect(f, 1, 99);
+        if (root!=null){ RH_in=root; document.getElementById("RH_in").value=String(RH_in); solvedNote += `未入力を計算: RH_in = ${fmt(RH_in,1)} %\n`; }
+      }
+    }
+
+    // (3) T_out / RH_out を解く（V & Q 必須、IN既知）
+    else if ((miss==="T_out"||miss==="RH_out") && V_in!=null && Q_in!=null && IN_known){
+      if (miss==="T_out" && RH_o!=null){
+        const f = (Tout)=>{
+          const OUT = airProps(Tout, RH_o); if(!OUT) return NaN;
+          const m_dot = (V_in/60.0)/IN_known.v;
           return Q_in - m_dot*(IN_known.h - OUT.h);
         };
-        return solve_bisect(f, 1, 99);
-      };
-
-      if (miss==="T_in" && RH_in!=null && OUT_known){
-        const root = solve_in((Tin)=>airProps(Tin, RH_in));
-        if (root!=null){ T_in = root; document.getElementById("T_in").value = String(T_in); solvedNote += `未入力を計算: T_in = ${fmt(T_in,1)} °C\n`; }
-      } else if (miss==="RH_in" && T_in!=null && OUT_known){
-        const root = solve_in_RH();
-        if (root!=null){ RH_in = root; document.getElementById("RH_in").value = String(RH_in); solvedNote += `未入力を計算: RH_in = ${fmt(RH_in,1)} %\n`; }
-      } else if (miss==="T_out" && RH_o!=null && IN_known){
-        const root = solve_out((Tout)=>airProps(Tout, RH_o));
-        if (root!=null){ T_o = root; document.getElementById("T_out").value = String(T_o); solvedNote += `未入力を計算: T_out = ${fmt(T_o,1)} °C\n`; }
-      } else if (miss==="RH_out" && T_o!=null && IN_known){
-        const root = solve_out_RH();
-        if (root!=null){ RH_o = root; document.getElementById("RH_out").value = String(RH_o); solvedNote += `未入力を計算: RH_out = ${fmt(RH_o,1)} %\n`; }
+        const root = solve_bisect(f, -30, 40);
+        if (root!=null){ T_o=root; document.getElementById("T_out").value=String(T_o); solvedNote += `未入力を計算: T_out = ${fmt(T_o,1)} °C\n`; }
+      } else if (miss==="RH_out" && T_o!=null){
+        const f = (rh)=>{
+          const RH = Math.max(1, Math.min(99, rh));
+          const OUT = airProps(T_o, RH); if(!OUT) return NaN;
+          const m_dot = (V_in/60.0)/IN_known.v;
+          return Q_in - m_dot*(IN_known.h - OUT.h);
+        };
+        const root = solve_bisect(f, 1, 99);
+        if (root!=null){ RH_o=root; document.getElementById("RH_out").value=String(RH_o); solvedNote += `未入力を計算: RH_out = ${fmt(RH_o,1)} %\n`; }
       }
     }
-    // 他の組み合わせでは一意に決められない → 何もしない（要求通りエラーは出さない）
+    // それ以外（方程式不足など）は「解こうとせず」そのまま進む（＝エラーは出さない）
   }
 
-  // ---- ここから「可能な範囲だけ」表示 ----
-  const IN  = airProps(T_in, RH_in);
-  const OUT = airProps(T_o , RH_o );
+  // ---- 最終プロップ計算（可能な範囲だけ） ----
+  const IN  = (T_in!=null && RH_in!=null) ? airProps(T_in, RH_in) : null;
+  const OUT = (T_o !=null && RH_o !=null) ? airProps(T_o , RH_o ) : null;
 
-  // 主結果（V, Q, m_dot, L）は計算できるときだけ
   let m_dot=null, V_val=null, Q_val=null, L_Lph=null;
-
   if (IN && OUT){
-    if (V_in!=null){ m_dot = (V_in/60.0) / IN.v; V_val = V_in; }
-    if (Q_in!=null && m_dot!=null){
-      Q_val = m_dot * (IN.h - OUT.h);
-    } else if (Q_in!=null && V_in==null){
-      // V未入力でQだけ→主結果にQだけ表示
-      Q_val = Q_in;
+    if (V_in!=null){
+      m_dot = (V_in/60.0)/IN.v;
+      V_val = V_in;
+      Q_val = m_dot*(IN.h - OUT.h);
     }
     if (V_in==null && Q_in!=null){
-      const dH = (IN.h - OUT.h);
+      const dH = IN.h - OUT.h;
       if (Math.abs(dH)>1e-12){
-        m_dot = Q_in / dH;
-        V_val = m_dot * 60.0 * IN.v;
+        m_dot = Q_in/dH;
+        V_val = m_dot*60.0*IN.v;
+        Q_val = Q_in;
+      } else {
+        Q_val = Q_in;
       }
     }
-    if (IN && OUT && m_dot!=null){
-      L_Lph = (IN.x - OUT.x) * m_dot * 3600.0; // kg/h ≒ L/h
+    if (m_dot!=null){
+      L_Lph = (IN.x - OUT.x) * m_dot * 3600.0;
     }
+  } else {
+    // 片側だけでも詳細は表示可
   }
 
-  // 表示
-  document.getElementById("rV").textContent = V_val!=null ? fmt(V_val,1) : "-";
-  document.getElementById("rQ").textContent = Q_val!=null ? fmt(Q_val,1) : "-";
-  document.getElementById("rL").textContent = L_Lph!=null ? fmt(L_Lph,1) : "-";
-  document.getElementById("rm").textContent = m_dot!=null ? fmt(m_dot,4) : "-";
+  // 主結果
+  document.getElementById("rV").textContent = (V_val!=null)? fmt(V_val,1) : "-";
+  document.getElementById("rQ").textContent = (Q_val!=null)? fmt(Q_val,1) : (Q_in!=null? fmt(Q_in,1): "-");
+  document.getElementById("rL").textContent = (L_Lph!=null)? fmt(L_Lph,1) : "-";
+  document.getElementById("rm").textContent = (m_dot!=null)? fmt(m_dot,4) : "-";
 
+  // 詳細
   fillState("in", IN);
   fillState("out", OUT);
 
-  outWrap.style.display = (IN || OUT) ? "block" : "none";
+  // 表示切替＆メッセージ
+  document.getElementById("results").style.display = (IN||OUT)? "block":"none";
   msg.textContent = solvedNote || "入力された範囲で計算しました。";
 }
 
