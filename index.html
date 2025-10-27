@@ -1,195 +1,259 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>除湿能力 計算（軽量HTML版）</title>
-  <!-- PyScript（Pyodide同梱）※追加パッケージは読み込みません -->
-  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+  <title>除湿能力 計算（軽量版・グラフなし）</title>
   <style>
-    :root { --pad:14px; }
-    body{font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
-         padding:16px; max-width:820px; margin:auto; line-height:1.6}
-    h1{font-size:1.15rem; margin:2px 0 10px}
-    .card{border:1px solid #e5e7eb; border-radius:12px; padding:var(--pad); margin:12px 0; box-shadow:0 1px 2px rgba(0,0,0,.03)}
-    .row{display:grid; grid-template-columns:8.5em 1fr 6.5em; gap:8px; align-items:center; margin:8px 0}
-    label{font-size:0.95rem}
-    input{width:100%; padding:12px; font-size:18px; border:1px solid #d1d5db; border-radius:10px}
-    input:focus{outline:none; border-color:#60a5fa; box-shadow:0 0 0 3px rgba(96,165,250,.25)}
-    button{width:100%; padding:14px; font-size:18px; border-radius:12px; border:0; background:#0ea5e9; color:#fff}
-    button:active{transform:translateY(1px)}
-    .muted{color:#6b7280; font-size:0.95rem}
-    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
-    .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-    .ok{color:#059669}.err{color:#dc2626}
-    @media (max-width:480px){ .row{grid-template-columns:7.5em 1fr 5.5em} }
+    :root { --fg:#222; --muted:#666; --accent:#0a7; --err:#c22; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans JP", sans-serif;
+           margin: 0; color: var(--fg); background:#fafafa; }
+    header { padding: 16px 20px; background:#fff; border-bottom:1px solid #eee; position: sticky; top:0; }
+    header h1 { font-size: 18px; margin: 0; }
+    main { padding: 16px; max-width: 900px; margin: 0 auto; }
+    .card { background:#fff; border:1px solid #eee; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 660px) { .grid { grid-template-columns: 1fr; } }
+    label { display:block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    input[type="number"] { width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1px solid #ddd; font-size:16px; }
+    .row { display:flex; gap:10px; align-items:center; }
+    .unit { white-space:nowrap; color:#555; font-size: 14px; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; }
+    button { appearance:none; border:none; border-radius: 12px; padding: 12px 16px; font-size: 16px; cursor:pointer; }
+    .primary { background: var(--accent); color: #fff; }
+    .secondary { background:#eee; color:#333; }
+    .msg { margin: 8px 0; font-size:14px; }
+    .msg.ok { color: var(--accent); }
+    .msg.err { color: var(--err); }
+    table { width:100%; border-collapse: collapse; }
+    th, td { padding:10px 8px; border-bottom:1px solid #eee; text-align: right; }
+    th:nth-child(1), td:nth-child(1) { text-align:left; }
+    footer { padding: 24px; text-align:center; color:#888; font-size:13px; }
   </style>
 </head>
 <body>
-  <h1>除湿能力 計算（HTML/ブラウザ実行・軽量版）</h1>
+  <header>
+    <h1>除湿能力 計算（軽量・グラフ無し）</h1>
+  </header>
 
-  <div class="card">
-    <div class="row">
-      <label>吸込温度</label>
-      <input id="T_in" type="number" step="0.1" inputmode="decimal" placeholder="例) 27">
-      <span>°C(DB)</span>
-    </div>
-    <div class="row">
-      <label>吸込湿度</label>
-      <input id="RH_in" type="number" step="0.1" inputmode="decimal" placeholder="例) 50">
-      <span>%RH</span>
-    </div>
-    <div class="row">
-      <label>冷却温度</label>
-      <input id="T_out" type="number" step="0.1" inputmode="decimal" placeholder="例) 15">
-      <span>°C(DB)</span>
-    </div>
-    <div class="row">
-      <label>冷却湿度</label>
-      <input id="RH_out" type="number" step="0.1" inputmode="decimal" placeholder="例) 90">
-      <span>%RH</span>
-    </div>
-    <div class="row">
-      <label>風量（任意）</label>
-      <input id="V" type="number" step="0.1" inputmode="decimal" placeholder="例) 30">
-      <span>m³/min</span>
-    </div>
-    <div class="row">
-      <label>冷却能力（任意）</label>
-      <input id="Q" type="number" step="0.1" inputmode="decimal" placeholder="未入力なら自動計算">
-      <span>kW</span>
-    </div>
-    <div class="muted">※ 必須：吸込T/φ・冷却T/φ と「VまたはQのどちらか」</div>
-    <div style="margin-top:12px"><button id="calc">計算</button></div>
-    <div id="msg" class="muted" style="margin-top:8px"></div>
-  </div>
+  <main>
+    <section class="card">
+      <h2 style="margin:0 0 12px 0; font-size:16px;">入力</h2>
+      <div class="grid">
+        <!-- 吸込 -->
+        <div>
+          <label>吸込 乾球温度</label>
+          <div class="row">
+            <input id="T_in" type="number" step="0.1" placeholder="例: 27.0" />
+            <span class="unit">°C(DB)</span>
+          </div>
+        </div>
+        <div>
+          <label>吸込 相対湿度</label>
+          <div class="row">
+            <input id="RH_in" type="number" step="0.1" placeholder="例: 50" />
+            <span class="unit">%RH</span>
+          </div>
+        </div>
 
-  <div id="results" class="card" style="display:none">
-    <div class="grid2 mono">
-      <div>風量 V: <span id="rV"></span> m³/min</div>
-      <div>冷却能力 Q: <span id="rQ"></span> kW</div>
-      <div>除湿量 L: <span id="rL"></span> L/h</div>
-      <div>質量流量 ṁ: <span id="rm"></span> kg/s</div>
-    </div>
-    <div class="muted" style="margin-top:8px">
-      ※ BF・混合・再熱は未対応（軽量化のため）。必要になったら足せます。
-    </div>
-  </div>
+        <!-- 冷却後 -->
+        <div>
+          <label>冷却後 乾球温度</label>
+          <div class="row">
+            <input id="T_out" type="number" step="0.1" placeholder="例: 14.0" />
+            <span class="unit">°C(DB)</span>
+          </div>
+        </div>
+        <div>
+          <label>冷却後 相対湿度</label>
+          <div class="row">
+            <input id="RH_out" type="number" step="0.1" placeholder="例: 95" />
+            <span class="unit">%RH</span>
+          </div>
+        </div>
 
-  <!-- 追加パッケージなし -->
-  <py-config></py-config>
+        <!-- どちらか一方でOK -->
+        <div>
+          <label>風量（どちらか一方でOK）</label>
+          <div class="row">
+            <input id="V" type="number" step="0.1" placeholder="例: 20.0" />
+            <span class="unit">m³/min</span>
+          </div>
+        </div>
+        <div>
+          <label>冷却能力（どちらか一方でOK）</label>
+          <div class="row">
+            <input id="Q" type="number" step="0.1" placeholder="例: 未入力でも可" />
+            <span class="unit">kW</span>
+          </div>
+        </div>
+      </div>
 
-  <py-script>
-from js import document
-import math
+      <div class="actions" style="margin-top:14px;">
+        <button id="calc" class="primary">計算</button>
+        <button id="clear" class="secondary">クリア</button>
+      </div>
+      <div id="msg" class="msg"></div>
+    </section>
 
-# 定数（kJ系に統一）
-P_ATM = 101.325   # kPa
-R_AIR = 0.287     # kJ/(kg·K)
-C_A   = 1.006     # kJ/(kg·K)
-C_W   = 1.86      # kJ/(kg·K)
-H_W   = 2501.0    # kJ/kg
+    <section id="resultsCard" class="card" style="display:none;">
+      <h2 style="margin:0 0 12px 0; font-size:16px;">計算結果</h2>
+      <table>
+        <tbody>
+          <tr><th>風量 V</th><td><span id="rV">-</span></td><td class="unit">m³/min</td></tr>
+          <tr><th>冷却能力 Q</th><td><span id="rQ">-</span></td><td class="unit">kW</td></tr>
+          <tr><th>除湿量</th><td><span id="rL">-</span></td><td class="unit">L/h</td></tr>
+          <tr><th>質量流量 ṁ</th><td><span id="rm">-</span></td><td class="unit">kg/s</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
 
-def ps(T_c):
-    # Tetens式近似（kPa）
-    return 0.61078 * math.exp((17.27 * T_c) / (T_c + 237.3))
+  <footer>© Dehumidify Calculator (Static HTML/JS)</footer>
 
-def x_from_phi(phi, T_c):
-    # phi: 相対湿度(0-1), x: kg/kg(DA)
-    pv = phi * ps(T_c)
-    return 0.622 * pv / (P_ATM - pv)
+  <script>
+    // --- 物性定数（kJ 系）---
+    const P_ATM = 101.325; // kPa
+    const R_AIR = 0.287;   // kJ/(kg·K)
+    const C_A   = 1.006;   // kJ/(kg·K)
+    const C_W   = 1.86;    // kJ/(kg·K)
+    const H_W   = 2501.0;  // kJ/kg
 
-def h_moist_air(T_c, x):
-    # 比エンタルピ kJ/kg(DA)
-    return C_A*T_c + x * (H_W + C_W*T_c)
+    // 飽和水蒸気圧（Tetens近似, kPa）
+    function ps(Tc){
+      return 0.61078 * Math.exp((17.27 * Tc) / (Tc + 237.3));
+    }
 
-def v_specific(T_c, x):
-    # 比容 m^3/kg(DA)
-    return (R_AIR * (T_c + 273.15) / P_ATM) * (1.0 + 1.6078 * x)
+    // 相対湿度(0-1) → 絶対湿度 x[kg/kg(DA)]
+    function x_from_phi(phi, Tc){
+      const pv = phi * ps(Tc); // kPa
+      return 0.622 * pv / (P_ATM - pv);
+    }
 
-def safe_float(s):
-    try:
-        return float(s)
-    except:
-        return None
+    // 比エンタルピ h [kJ/kg(DA)]
+    function h_moist_air(Tc, x){
+      return C_A*Tc + x*(H_W + C_W*Tc);
+    }
 
-def compute(event=None):
-    msg = document.getElementById("msg")
-    out = document.getElementById("results")
-    msg.innerHTML = ""
-    out.style.display = "none"
+    // 比容 v [m^3/kg(DA)]
+    function v_specific(Tc, x){
+      return (R_AIR * (Tc + 273.15) / P_ATM) * (1 + 1.6078 * x);
+    }
 
-    T_in  = safe_float(document.getElementById("T_in").value)
-    RH_in = safe_float(document.getElementById("RH_in").value)
-    T_o   = safe_float(document.getElementById("T_out").value)
-    RH_o  = safe_float(document.getElementById("RH_out").value)
-    V_in  = safe_float(document.getElementById("V").value)  # m^3/min  | optional
-    Q_in  = safe_float(document.getElementById("Q").value)  # kW       | optional
+    function fnum(s){
+      if (s === null || s === undefined || s === "") return null;
+      const v = Number(s);
+      return Number.isFinite(v) ? v : null;
+    }
 
-    # 必須チェック
-    if None in (T_in, RH_in, T_o, RH_o):
-        msg.innerHTML = "<span class='err'>吸込T/φ・冷却T/φは必須です。</span>"
-        return
-    if (V_in is None) and (Q_in is None):
-        msg.innerHTML = "<span class='err'>風量 V または 冷却能力 Q のどちらかを入力してください。</span>"
-        return
+    function fmt(x, n=1){
+      return (x===null || !Number.isFinite(x)) ? "-" : x.toFixed(n);
+    }
 
-    # 吸込状態
-    phi_in = RH_in / 100.0
-    x_in   = x_from_phi(phi_in, T_in)
-    h_in   = h_moist_air(T_in, x_in)
-    v_in   = v_specific(T_in, x_in)
+    function compute(){
+      const msg = document.getElementById("msg");
+      const card = document.getElementById("resultsCard");
+      msg.textContent = "";
+      msg.className = "msg";
 
-    # 冷却後状態
-    phi_o = RH_o / 100.0
-    x_o   = x_from_phi(phi_o, T_o)
-    h_o   = h_moist_air(T_o, x_o)
+      // 入力取得
+      const T_in  = fnum(document.getElementById("T_in").value);
+      const RH_in = fnum(document.getElementById("RH_in").value);
+      const T_o   = fnum(document.getElementById("T_out").value);
+      const RH_o  = fnum(document.getElementById("RH_out").value);
+      let   V_in  = fnum(document.getElementById("V").value);  // m^3/min（任意）
+      let   Q_in  = fnum(document.getElementById("Q").value);  // kW（任意）
 
-    # 質量流量・Q・V の相互計算
-    m_dot = None
-    Q_val = Q_in
-    V_val = V_in
+      // 必須チェック
+      if ([T_in,RH_in,T_o,RH_o].some(v => v===null)){
+        msg.textContent = "吸込T/φ・冷却T/φは必須です。";
+        msg.classList.add("err");
+        card.style.display = "none";
+        return;
+      }
+      if (V_in===null && Q_in===null){
+        msg.textContent = "風量 V または 冷却能力 Q のどちらかを入力してください。";
+        msg.classList.add("err");
+        card.style.display = "none";
+        return;
+      }
 
-    # Vがあるなら m_dot を先に確定
-    if V_val is not None:
-        m_dot = (V_val / 60.0) / v_in  # kg/s
+      // 物性（吸込側）
+      const phi_in = RH_in/100.0;
+      const x_in   = x_from_phi(phi_in, T_in);
+      const h_in   = h_moist_air(T_in, x_in);
+      const v_in   = v_specific(T_in, x_in);
 
-    # Qが無ければ計算
-    if Q_val is None:
-        if m_dot is None:
-            msg.innerHTML = "<span class='err'>内部エラー: m_dot未定義</span>"
-            return
-        Q_val = m_dot * (h_in - h_o)  # kW
+      // 物性（冷却後）
+      const phi_o = RH_o/100.0;
+      const x_o   = x_from_phi(phi_o, T_o);
+      const h_o   = h_moist_air(T_o, x_o);
 
-    # Vが無ければ Q から逆算
-    if V_val is None:
-        # Q = m_dot*(h_in - h_o) → m_dot = Q / Δh
-        delta_h = (h_in - h_o)
-        if abs(delta_h) < 1e-9:
-            msg.innerHTML = "<span class='err'>状態が等しいため V を逆算できません（Δh≈0）。</span>"
-            return
-        m_dot = Q_val / delta_h
-        V_val = m_dot * 60.0 * v_in
+      // 連成：ṁ, Q, V
+      let m_dot = null;
+      let Q = Q_in;
+      let V = V_in;
 
-    # 除湿量 L/h
-    L_Lph = (x_in - x_o) * m_dot * 3600.0  # kg/h ≒ L/h
+      // Vがある → m_dot 先に確定
+      if (V !== null){
+        m_dot = (V / 60.0) / v_in; // kg/s
+      }
 
-    # 表示
-    def fmt(x, n=1):
-        try:
-            return f"{x:.{n}f}"
-        except:
-            return "-"
+      // Qが空なら計算
+      if (Q === null){
+        if (m_dot === null){
+          msg.textContent = "内部エラー: m_dot 未定義（Vを入れるか、Qを直接入力してください）";
+          msg.classList.add("err");
+          card.style.display = "none";
+          return;
+        }
+        Q = m_dot * (h_in - h_o); // kW
+      }
 
-    document.getElementById("rV").innerText = fmt(V_val, 1)
-    document.getElementById("rQ").innerText = fmt(Q_val, 1)
-    document.getElementById("rL").innerText = fmt(L_Lph, 1)
-    document.getElementById("rm").innerText = fmt(m_dot, 4)
-    out.style.display = "block"
-    msg.innerHTML = "<span class='ok'>計算しました。</span>"
+      // Vが空なら Qから逆算
+      if (V === null){
+        const dh = (h_in - h_o);
+        if (Math.abs(dh) < 1e-12){
+          msg.textContent = "状態が等しいため V を逆算できません（Δh ≈ 0）。";
+          msg.classList.add("err");
+          card.style.display = "none";
+          return;
+        }
+        m_dot = Q / dh;
+        V = m_dot * 60.0 * v_in; // m^3/min
+      }
 
-document.getElementById("calc").addEventListener("click", compute)
-  </py-script>
+      // 除湿量 [kg/h ≒ L/h]
+      const L_Lph = (x_in - x_o) * m_dot * 3600.0;
+
+      // 表示
+      document.getElementById("rV").textContent  = fmt(V, 1);
+      document.getElementById("rQ").textContent  = fmt(Q, 1);
+      document.getElementById("rL").textContent  = fmt(L_Lph, 1);
+      document.getElementById("rm").textContent  = fmt(m_dot, 4);
+
+      card.style.display = "block";
+      msg.textContent = "計算しました。";
+      msg.classList.add("ok");
+    }
+
+    function clearAll(){
+      ["T_in","RH_in","T_out","RH_out","V","Q"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      document.getElementById("resultsCard").style.display = "none";
+      const msg = document.getElementById("msg");
+      msg.textContent = "";
+      msg.className = "msg";
+    }
+
+    document.getElementById("calc").addEventListener("click", compute);
+    document.getElementById("clear").addEventListener("click", clearAll);
+
+    // Enterキーで計算
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") compute();
+    });
+  </script>
 </body>
 </html>
