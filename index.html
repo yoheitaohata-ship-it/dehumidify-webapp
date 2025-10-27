@@ -61,7 +61,7 @@
               <input id="T_out" type="number" inputmode="decimal" step="any" />
             </div>
             <div>
-              <label>相対湿度 RH<sub>out</sub> [%]</label>
+              <label>相対湿度RH<sub>out</sub>[%]</label>
               <input id="RH_out" type="number" inputmode="decimal" step="any" />
             </div>
           </div>
@@ -272,7 +272,7 @@ function compute(){
   const missing = Object.keys(fields).filter(k => fields[k]==null);
   let solvedNote = "";
 
-  /* ---- 5/6なら未知1個を解く ---- */
+  /* ---- 5/6なら未知1個を解く（入力欄へは書き戻さない） ---- */
   if (missing.length === 1){
     const miss = missing[0];
     const IN_known  = (T_in!=null && RH_in!=null) ? airProps(T_in, RH_in) : null;
@@ -283,58 +283,62 @@ function compute(){
       const dH = (IN_known.h - OUT_known.h);
       if (Math.abs(dH)>1e-12){
         const m_dot = Q_in / dH;
-        V_in = m_dot * 60.0 * IN_known.v;
-        document.getElementById("V").value = String(V_in);
-        solvedNote += `未入力を計算: V = ${fmt(V_in,1)} m³/min\n`;
+        const V_solved = m_dot * 60.0 * IN_known.v;
+        V_in = V_in ?? null; // 入力欄は変更しない
+        solvedNote += `未入力を計算: V = ${fmt(V_solved,1)} m³/min\n`;
+        // 結果パネルは後段で V_val に反映
+        window.__V_solved = V_solved;
       }
     } else if (miss==="Q" && V_in!=null && IN_known && OUT_known){
       const m_dot = (V_in/60.0)/IN_known.v;
-      Q_in = m_dot * (IN_known.h - OUT_known.h);
-      document.getElementById("Q").value = String(Q_in);
-      solvedNote += `未入力を計算: Q = ${fmt(Q_in,1)} kW\n`;
+      const Q_solved = m_dot * (IN_known.h - OUT_known.h);
+      solvedNote += `未入力を計算: Q = ${fmt(Q_solved,1)} kW\n`;
+      window.__Q_solved = Q_solved;
     }
 
     // (2) 入口側（V & Q 必須、OUT既知）
-    else if ((miss==="T_in"||miss==="RH_in") && V_in!=null && Q_in!=null && OUT_known){
+    else if ((miss==="T_in"||miss==="RH_in") && V_in!=null && (Q_in!=null || window.__Q_solved!=null) && OUT_known){
+      const Qeff = (Q_in!=null)? Q_in : window.__Q_solved;
       if (miss==="T_in" && RH_in!=null){
         const f = (Tin)=>{
           const IN = airProps(Tin, RH_in); if(!IN) return NaN;
           const m_dot = (V_in/60.0)/IN.v;
-          return Q_in - m_dot*(IN.h - OUT_known.h);
+          return Qeff - m_dot*(IN.h - OUT_known.h);
         };
         const root = solve_bisect(f, -30, 60);
-        if (root!=null){ T_in=root; document.getElementById("T_in").value=String(T_in); solvedNote += `未入力を計算: T_in = ${fmt(T_in,1)} °C\n`; }
+        if (root!=null){ T_in=root; solvedNote += `未入力を計算: T_in = ${fmt(T_in,1)} °C\n`; }
       } else if (miss==="RH_in" && T_in!=null){
         const f = (rh)=>{
           const RH = Math.max(1, Math.min(99, rh));
           const IN = airProps(T_in, RH); if(!IN) return NaN;
           const m_dot = (V_in/60.0)/IN.v;
-          return Q_in - m_dot*(IN.h - OUT_known.h);
+          return Qeff - m_dot*(IN.h - OUT_known.h);
         };
         const root = solve_bisect(f, 1, 99);
-        if (root!=null){ RH_in=root; document.getElementById("RH_in").value=String(RH_in); solvedNote += `未入力を計算: RH_in = ${fmt(RH_in,1)} %\n`; }
+        if (root!=null){ RH_in=root; solvedNote += `未入力を計算: RH_in = ${fmt(RH_in,1)} %\n`; }
       }
     }
 
     // (3) 出口側（V & Q 必須、IN既知）
-    else if ((miss==="T_out"||miss==="RH_out") && V_in!=null && Q_in!=null && IN_known){
+    else if ((miss==="T_out"||miss==="RH_out") && V_in!=null && (Q_in!=null || window.__Q_solved!=null) && IN_known){
+      const Qeff = (Q_in!=null)? Q_in : window.__Q_solved;
       if (miss==="T_out" && RH_o!=null){
         const f = (Tout)=>{
           const OUT = airProps(Tout, RH_o); if(!OUT) return NaN;
           const m_dot = (V_in/60.0)/IN_known.v;
-          return Q_in - m_dot*(IN_known.h - OUT.h);
+          return Qeff - m_dot*(IN_known.h - OUT.h);
         };
         const root = solve_bisect(f, -30, 40);
-        if (root!=null){ T_o=root; document.getElementById("T_out").value=String(T_o); solvedNote += `未入力を計算: T_out = ${fmt(T_o,1)} °C\n`; }
+        if (root!=null){ T_o=root; solvedNote += `未入力を計算: T_out = ${fmt(T_o,1)} °C\n`; }
       } else if (miss==="RH_out" && T_o!=null){
         const f = (rh)=>{
           const RH = Math.max(1, Math.min(99, rh));
           const OUT = airProps(T_o, RH); if(!OUT) return NaN;
           const m_dot = (V_in/60.0)/IN_known.v;
-          return Q_in - m_dot*(IN_known.h - OUT.h);
+          return Qeff - m_dot*(IN_known.h - OUT.h);
         };
         const root = solve_bisect(f, 1, 99);
-        if (root!=null){ RH_o=root; document.getElementById("RH_out").value=String(RH_o); solvedNote += `未入力を計算: RH_out = ${fmt(RH_o,1)} %\n`; }
+        if (root!=null){ RH_o=root; solvedNote += `未入力を計算: RH_out = ${fmt(RH_o,1)} %\n`; }
       }
     }
     // 不足条件は解かずに続行（エラーを出さない）
@@ -345,20 +349,26 @@ function compute(){
   const OUT = (T_o !=null && RH_o !=null) ? airProps(T_o , RH_o ) : null;
 
   let m_dot=null, V_val=null, Q_val=null, L_Lph=null;
+
+  // 先に単独で解いた値があれば使う
+  if (window.__V_solved!=null) V_val = window.__V_solved;
+  if (window.__Q_solved!=null) Q_val = window.__Q_solved;
+
   if (IN && OUT){
     if (V_in!=null){
       m_dot = (V_in/60.0)/IN.v;
-      V_val = V_in;
-      Q_val = m_dot*(IN.h - OUT.h);
+      V_val = (V_val!=null)? V_val : V_in;
+      Q_val = (Q_val!=null)? Q_val : m_dot*(IN.h - OUT.h);
     }
-    if (V_in==null && Q_in!=null){
+    if (V_in==null && (Q_val!=null || Q_in!=null)){
+      const Qeff = (Q_val!=null)? Q_val : Q_in;
       const dH = IN.h - OUT.h;
       if (Math.abs(dH)>1e-12){
-        m_dot = Q_in/dH;
+        m_dot = Qeff/dH;
         V_val = m_dot*60.0*IN.v;
-        Q_val = Q_in;
+        Q_val = Qeff;
       } else {
-        Q_val = Q_in;
+        Q_val = Qeff;
       }
     }
     if (m_dot!=null){
@@ -379,6 +389,10 @@ function compute(){
   // 表示切替＆メッセージ
   document.getElementById("results").style.display = (IN||OUT)? "block":"none";
   msg.textContent = solvedNote || "入力された範囲で計算しました。";
+
+  // 一時フラグをクリア（次回計算に干渉しないように）
+  delete window.__V_solved;
+  delete window.__Q_solved;
 }
 
 /* クリア */
@@ -390,6 +404,8 @@ function clearAll(){
   const msg = document.getElementById("msg");
   msg.textContent = "";
   document.getElementById("results").style.display = "none";
+  delete window.__V_solved;
+  delete window.__Q_solved;
 }
 
 /* イベント */
