@@ -111,7 +111,7 @@
             <div class="kv"><div class="k">絶対湿度 x [g/kg(DA)]</div><div class="v" id="in_x">-</div></div>
             <div class="kv"><div class="k">露点温度 [°C]</div><div class="v" id="in_Td">-</div></div>
             <div class="kv"><div class="k">水蒸気分圧 pv [Pa]</div><div class="v" id="in_pv">-</div></div>
-            <div class="kv"><div class="k">比容積 v [m³/kg]</div><div class="v" id="in_v">-</div></div>
+            <div class="kv"><div class="k">比容 v [m³/kg]</div><div class="v" id="in_v">-</div></div>
             <div class="kv"><div class="k">比エンタルピ h [kJ/kg]</div><div class="v" id="in_h">-</div></div>
             <div class="kv"><div class="k">飽和度 μ [%]</div><div class="v" id="in_mu">-</div></div>
             <div class="kv"><div class="k">不快指数 DI</div><div class="v" id="in_DI">-</div></div>
@@ -127,7 +127,7 @@
             <div class="kv"><div class="k">絶対湿度 x [g/kg(DA)]</div><div class="v" id="out_x">-</div></div>
             <div class="kv"><div class="k">露点温度 [°C]</div><div class="v" id="out_Td">-</div></div>
             <div class="kv"><div class="k">水蒸気分圧 pv [Pa]</div><div class="v" id="out_pv">-</div></div>
-            <div class="kv"><div class="k">比容積 v [m³/kg]</div><div class="v" id="out_v">-</div></div>
+            <div class="kv"><div class="k">比容 v [m³/kg]</div><div class="v" id="out_v">-</div></div>
             <div class="kv"><div class="k">比エンタルピ h [kJ/kg]</div><div class="v" id="out_h">-</div></div>
             <div class="kv"><div class="k">飽和度 μ [%]</div><div class="v" id="out_mu">-</div></div>
             <div class="kv"><div class="k">不快指数 DI</div><div class="v" id="out_DI">-</div></div>
@@ -277,13 +277,13 @@ function compute(){
         const m_dot = Q_in / dH;
         V_in = m_dot * 60.0 * IN_known.v;
         document.getElementById("V").value = String(V_in);
-        solvedNote += `風量 V = ${fmt(V_in,1)} m³/min\n`;
+        solvedNote += `未入力: V = ${fmt(V_in,1)} m³/min\n`;
       }
     } else if (miss==="Q" && V_in!=null && IN_known && OUT_known){
       const m_dot = (V_in/60.0)/IN_known.v;
       Q_in = m_dot * (IN_known.h - OUT_known.h);
       document.getElementById("Q").value = String(Q_in);
-      solvedNote += `冷却能力 Q = ${fmt(Q_in,1)} kW\n`;
+      solvedNote += `未入力: Q = ${fmt(Q_in,1)} kW\n`;
     }
 
     // (2) T_in / RH_in を解く（V & Q 必須、OUT既知）
@@ -295,7 +295,7 @@ function compute(){
           return Q_in - m_dot*(IN.h - OUT_known.h);
         };
         const root = solve_bisect(f, -30, 60);
-        if (root!=null){ T_in=root; document.getElementById("T_in").value=String(T_in); solvedNote += `乾球温度 T_in = ${fmt(T_in,1)} °C\n`; }
+        if (root!=null){ T_in=root; document.getElementById("T_in").value=String(T_in); solvedNote += `未入力: T_in = ${fmt(T_in,1)} °C\n`; }
       } else if (miss==="RH_in" && T_in!=null){
         const f = (rh)=>{
           const RH = Math.max(1, Math.min(99, rh));
@@ -304,7 +304,7 @@ function compute(){
           return Q_in - m_dot*(IN.h - OUT_known.h);
         };
         const root = solve_bisect(f, 1, 99);
-        if (root!=null){ RH_in=root; document.getElementById("RH_in").value=String(RH_in); solvedNote += `相対湿度 RH_in = ${fmt(RH_in,1)} %\n`; }
+        if (root!=null){ RH_in=root; document.getElementById("RH_in").value=String(RH_in); solvedNote += `未入力: RH_in = ${fmt(RH_in,1)} %\n`; }
       }
     }
 
@@ -317,7 +317,7 @@ function compute(){
           return Q_in - m_dot*(IN_known.h - OUT.h);
         };
         const root = solve_bisect(f, -30, 40);
-        if (root!=null){ T_o=root; document.getElementById("T_out").value=String(T_o); solvedNote += `乾球温度 T_out = ${fmt(T_o,1)} °C\n`; }
+        if (root!=null){ T_o=root; document.getElementById("T_out").value=String(T_o); solvedNote += `未入力: T_out = ${fmt(T_o,1)} °C\n`; }
       } else if (miss==="RH_out" && T_o!=null){
         const f = (rh)=>{
           const RH = Math.max(1, Math.min(99, rh));
@@ -326,7 +326,7 @@ function compute(){
           return Q_in - m_dot*(IN_known.h - OUT.h);
         };
         const root = solve_bisect(f, 1, 99);
-        if (root!=null){ RH_o=root; document.getElementById("RH_out").value=String(RH_o); solvedNote += `相対湿度 RH_out = ${fmt(RH_o,1)} %\n`; }
+        if (root!=null){ RH_o=root; document.getElementById("RH_out").value=String(RH_o); solvedNote += `未入力: RH_out = ${fmt(RH_o,1)} %\n`; }
       }
     }
     // それ以外（方程式不足など）は「解こうとせず」そのまま進む（＝エラーは出さない）
