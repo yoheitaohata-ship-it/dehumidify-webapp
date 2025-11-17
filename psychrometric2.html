@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>心理線図ツール（HTML版）</title>
+  <!-- Plotly.js CDN -->
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
     body {
@@ -10,6 +11,7 @@
       margin: 0;
       background: #fafafa;
     }
+
     header {
       background:#f5f5f5;
       padding:12px 20px;
@@ -20,7 +22,7 @@
       font-size:22px;
     }
 
-    /* ==== PC版レイアウト：2カラム ==== */
+    /* PC横画面では2カラム */
     .container {
       display:grid;
       grid-template-columns:380px 1fr;
@@ -28,7 +30,7 @@
       padding:16px 20px 24px;
     }
 
-    /* ==== スマホ縦画面では1カラム ===== */
+    /* スマホ縦画面では1カラム */
     @media (max-width: 768px) {
       .container {
         grid-template-columns:1fr;
@@ -73,12 +75,20 @@
       border-radius:6px;
       box-sizing:border-box;
     }
+    input[type="number"]:focus {
+      outline:none;
+      border-color:#ff9ab0;
+      box-shadow:0 0 0 2px rgba(255,155,176,0.35);
+    }
 
-    /* スマホ入力しやすさUP */
+    /* スマホで入力しやすく */
     @media (max-width:768px) {
       label {
         width:130px;
         font-size:15px;
+      }
+      .row {
+        gap:8px;
       }
       input[type="number"] {
         width:180px;
@@ -102,7 +112,11 @@
     .btn-primary:hover {
       background:#ff9ab0;
     }
+    .btn-secondary {
+      background:#f0f0f0;
+    }
 
+    /* スマホではボタンを大きく・縦並びに */
     @media (max-width:768px) {
       button {
         width:100%;
@@ -127,6 +141,7 @@
       border-radius:4px;
     }
 
+    /* グラフパネルは最初非表示 */
     #graph-panel {
       display:none;
     }
@@ -135,14 +150,11 @@
       width:100%;
       height:500px;
     }
-
-    /* スマホではグラフ高さも調整 */
     @media (max-width:768px) {
       #graph {
         height:400px;
       }
     }
-
   </style>
 </head>
 <body>
@@ -153,43 +165,43 @@
 
 <div class="container">
 
-  <!-- 左側（スマホでは最上段） -->
+  <!-- 入力・情報エリア（スマホでは上側） -->
   <div>
     <div class="panel">
       <h2>吸込 空気条件</h2>
       <div class="row">
-        <label>温度 T_in [℃]</label>
-        <input type="number" id="Tin" step="0.1">
+        <label for="Tin">温度 T_in [℃]</label>
+        <input type="number" id="Tin" step="0.1" placeholder="例: 5">
       </div>
       <div class="row">
-        <label>相対湿度 φ_in [%]</label>
-        <input type="number" id="phi_in" step="0.1">
+        <label for="phi_in">相対湿度 φ_in [%]</label>
+        <input type="number" id="phi_in" step="0.1" placeholder="例: 80">
       </div>
     </div>
 
     <div class="panel">
       <h2>冷却後 空気条件</h2>
       <div class="row">
-        <label>温度 T_out [℃]</label>
-        <input type="number" id="Tout" step="0.1">
+        <label for="Tout">温度 T_out [℃]</label>
+        <input type="number" id="Tout" step="0.1" placeholder="例: -10">
       </div>
       <div class="row">
-        <label>相対湿度 φ_out [%]</label>
-        <input type="number" id="phi_out" step="0.1">
+        <label for="phi_out">相対湿度 φ_out [%]</label>
+        <input type="number" id="phi_out" step="0.1" placeholder="例: 95">
       </div>
     </div>
 
     <div class="panel">
       <h2>風量（任意）</h2>
       <div class="row">
-        <label>風量 V [m³/min]</label>
-        <input type="number" id="V" step="0.1">
+        <label for="V">風量 V [m³/min]</label>
+        <input type="number" id="V" step="0.1" placeholder="例: 50">
       </div>
     </div>
 
     <div class="panel">
       <button class="btn-primary" onclick="onPlot()">プロット</button>
-      <button onclick="onClear()">クリア</button>
+      <button class="btn-secondary" onclick="onClear()">クリア</button>
       <div id="status"></div>
     </div>
 
@@ -204,7 +216,7 @@
     </div>
   </div>
 
-  <!-- グラフ（スマホでは下に来る） -->
+  <!-- グラフエリア（スマホでは下に来る） -->
   <div id="graph-panel">
     <div class="panel">
       <h2>心理線図</h2>
@@ -215,11 +227,238 @@
 </div>
 
 <script>
-/* ここからJS：内容は前バージョンと同じ（省略しない） */
-/* 必要なら続けて書きますが、スマホ対応に影響しないので割愛します */
-/* 今のあなたのJSをそのままこの位置に貼ってOK */
+/* ========= 物性・計算ロジック ========= */
+const P_ATM = 101.325; // kPa
+const CA = 1.005;      // kJ/kgK
+const CW = 4.186;      // kJ/kgK
+const HW = 2500.0;     // kJ/kg
 
-/* --- この部分に既存の JavaScript をそのまま貼る --- */
+function ps(T){
+  // 飽和水蒸気圧[kPa]（Tetens近似）
+  return 0.61078 * Math.exp(17.27 * T / (T + 237.3));
+}
+function calcX(phi, T){
+  // 絶対湿度 x[kg/kg(DA)]（phi: 0〜1）
+  const pws = ps(T);
+  const pw  = phi * pws;
+  return 0.622 * pw / Math.max(P_ATM - pw, 1e-6);
+}
+function calcH(T, x){
+  // 比エンタルピ h[kJ/kg(DA)]
+  return CA * T + x * (HW + CW * T);
+}
+function calcV(T, x){
+  // 比容積 v[m³/kg(DA)]
+  const R = 0.287;
+  const Tk = T + 273.15;
+  return (R * Tk / P_ATM) * (1.0 + 1.6078 * x);
+}
+function linspace(a, b, n){
+  const arr = [];
+  if (n <= 1) {
+    arr.push(a);
+    return arr;
+  }
+  const d = (b - a) / (n - 1);
+  for (let i = 0; i < n; i++) {
+    arr.push(a + d * i);
+  }
+  return arr;
+}
+
+/* ========= グラフ描画 ========= */
+function drawChart(Tmin, Tmax, Tin, phi_in, Tout, phi_out){
+  // 温度配列
+  const T = linspace(Tmin, Tmax, 300);
+  const sat = T.map(t => calcX(1, t));
+
+  const traces = [{
+    x: T,
+    y: sat,
+    mode: "lines",
+    name: "100%RH",
+    line: {color: "black"}
+  }];
+
+  // 相対湿度線 10〜90%
+  for (let rh = 10; rh < 100; rh += 10) {
+    const xs = T.map(t => calcX(rh / 100, t));
+    traces.push({
+      x: T,
+      y: xs,
+      mode: "lines",
+      name: `${rh}%`,
+      line: {color: "gray"},
+      opacity: 0.6,
+      showlegend: (rh === 10)
+    });
+  }
+
+  let x_in = null;
+  let x_out = null;
+
+  // 吸込点
+  if (Tin != null && phi_in != null) {
+    x_in = calcX(phi_in / 100, Tin);
+    traces.push({
+      x: [Tin],
+      y: [x_in],
+      mode: "markers+text",
+      text: ["吸込"],
+      textposition: "top right",
+      marker: {color: "blue", size: 10}
+    });
+  }
+
+  // 冷却点
+  if (Tout != null && phi_out != null) {
+    x_out = calcX(phi_out / 100, Tout);
+    traces.push({
+      x: [Tout],
+      y: [x_out],
+      mode: "markers+text",
+      text: ["冷却"],
+      textposition: "bottom right",
+      marker: {color: "red", size: 10}
+    });
+  }
+
+  // プロセス線
+  if (x_in != null && x_out != null) {
+    traces.push({
+      x: [Tin, Tout],
+      y: [x_in, x_out],
+      mode: "lines",
+      line: {color: "purple", dash: "dash"},
+      name: "プロセス"
+    });
+  }
+
+  const layout = {
+    xaxis: {title: "温度 T [℃]"},
+    yaxis: {title: "絶対湿度 x [kg/kg(DA)]"},
+    margin: {l: 70, r: 20, t: 30, b: 60},
+    legend: {orientation: "h"}
+  };
+
+  // ★ ズーム・ドラッグなどの操作をすべて無効化
+  Plotly.newPlot("graph", traces, layout, {
+    responsive: true,
+    displayModeBar: false,
+    scrollZoom: false,
+    staticPlot: true
+  });
+}
+
+/* ========= 入力取得・ボタン処理 ========= */
+function numValue(id){
+  const v = document.getElementById(id).value;
+  if (v === "") return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
+function onPlot(){
+  const Tin  = numValue("Tin");
+  const phi_in  = numValue("phi_in");
+  const Tout = numValue("Tout");
+  const phi_out = numValue("phi_out");
+  const V    = numValue("V");
+
+  const statusEl   = document.getElementById("status");
+  const infoInEl   = document.getElementById("info_in");
+  const infoOutEl  = document.getElementById("info_out");
+  const infoProcEl = document.getElementById("info_proc");
+
+  // グラフパネルを表示
+  document.getElementById("graph-panel").style.display = "block";
+
+  // 温度範囲
+  const Ts = [];
+  if (Tin  != null) Ts.push(Tin);
+  if (Tout != null) Ts.push(Tout);
+
+  let Tmin = -20;
+  let Tmax = 40;
+  if (Ts.length > 0) {
+    const minT = Math.min(...Ts);
+    const maxT = Math.max(...Ts);
+    Tmin = minT - 5;
+    Tmax = maxT + 5;
+  }
+
+  drawChart(Tmin, Tmax, Tin, phi_in, Tout, phi_out);
+
+  // 吸込情報
+  let info_in = "未計算";
+  if (Tin != null && phi_in != null) {
+    const x = calcX(phi_in / 100, Tin);
+    const h = calcH(Tin, x);
+    const v = calcV(Tin, x);
+    info_in =
+      `T = ${Tin.toFixed(1)} ℃\n` +
+      `φ = ${phi_in.toFixed(1)} %\n` +
+      `x = ${x.toExponential(6)} kg/kg(DA)\n` +
+      `h = ${h.toFixed(2)} kJ/kg(DA)\n` +
+      `v = ${v.toFixed(4)} m³/kg(DA)`;
+  }
+
+  // 冷却情報
+  let info_out = "未計算";
+  if (Tout != null && phi_out != null) {
+    const x = calcX(phi_out / 100, Tout);
+    const h = calcH(Tout, x);
+    const v = calcV(Tout, x);
+    info_out =
+      `T = ${Tout.toFixed(1)} ℃\n` +
+      `φ = ${phi_out.toFixed(1)} %\n` +
+      `x = ${x.toExponential(6)} kg/kg(DA)\n` +
+      `h = ${h.toFixed(2)} kJ/kg(DA)\n` +
+      `v = ${v.toFixed(4)} m³/kg(DA)`;
+  }
+
+  infoInEl.textContent  = info_in;
+  infoOutEl.textContent = info_out;
+
+  // プロセス情報（Δh, 冷凍能力）
+  let proc = "未計算";
+  if (Tin!=null && phi_in!=null && Tout!=null && phi_out!=null) {
+    const x1 = calcX(phi_in/100, Tin);
+    const x2 = calcX(phi_out/100, Tout);
+    const h1 = calcH(Tin, x1);
+    const h2 = calcH(Tout, x2);
+    const dh = h1 - h2;
+    proc = `エンタルピ差 Δh = ${dh.toFixed(2)} kJ/kg(DA)`;
+
+    if (V != null) {
+      const v1 = calcV(Tin, x1);
+      const m_da = (V / 60.0) / v1;    // 乾き空気質量流量 [kg/s]
+      const Q_kW = m_da * dh;         // kW (kJ/s)
+      proc += `\n風量 V = ${V.toFixed(1)} m³/min のとき`;
+      proc += `\n  冷凍能力 ≒ ${Q_kW.toFixed(2)} kW`;
+    } else {
+      proc += `\n風量が未入力のため、冷凍能力は計算していません。`;
+    }
+  }
+
+  infoProcEl.textContent = proc;
+  statusEl.textContent   = "プロットしました。";
+}
+
+function onClear(){
+  ["Tin","phi_in","Tout","phi_out","V"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+
+  document.getElementById("info_in").textContent   = "未計算";
+  document.getElementById("info_out").textContent  = "未計算";
+  document.getElementById("info_proc").textContent = "未計算";
+  document.getElementById("status").textContent    = "クリアしました。";
+
+  // グラフ非表示に戻す
+  Plotly.purge("graph");
+  document.getElementById("graph-panel").style.display = "none";
+}
 </script>
 
 </body>
