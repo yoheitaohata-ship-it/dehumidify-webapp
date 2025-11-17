@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>心理線図ツール（スマホ特化版・V/Q逆算）</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <style>
+    body {
+      font-family: "Yu Gothic", "Meiryo", sans-serif;
+      margin: 0;
+      background: #fafafa;
+    }
+
+    header {
+      background:#f5f5f5;
+      padding:16px 20px;
+      border-bottom:1px solid #ddd;
+      text-align:center;
+    }
+    h1 {
+      margin:0;
+      font-size:66px; /* 大きめタイトル */
+    }
+
+    /* ====== 1カラム専用レイアウト ====== */
+    .container {
+      width:100%;
+      max-width:900px;
+      margin:0 auto;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+    }
+
+    .panel {
+      background:#fff;
+      padding:18px;
+      border-radius:12px;
+      border:1px solid #ddd;
+      box-shadow:0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .panel h2 {
+      margin-top:0;
+      font-size:60px;
+      border-bottom:1px solid #eee;
+      padding-bottom:6px;
+      margin-bottom:16px;
+    }
+
+    .row {
+      margin-bottom:18px;
+    }
+
+    label {
+      display:block;
+      font-size:48px;
+      margin-bottom:6px;
+    }
+
+    input[type="number"] {
+      width:100%;
+      padding:18px 20px;
+      font-size:54px;
+      border:1px solid #ccc;
+      border-radius:6px;
+      box-sizing:border-box;
+    }
+    input[type="number"]:focus {
+      outline:none;
+      border-color:#ff9ab0;
+      box-shadow:0 0 0 3px rgba(255,155,176,0.3);
+    }
+
+    button {
+      width:100%;
+      padding:22px;
+      font-size:54px;
+      border-radius:8px;
+      cursor:pointer;
+      margin-bottom:16px;
+      border:1px solid #ccc;
+    }
+    .btn-primary {
+      background:#ffb6c1;
+      border-color:#ff9ab0;
+    }
+    .btn-primary:hover {
+      background:#ff9ab0;
+    }
+    .btn-secondary {
+      background:#eee;
+    }
+
+    pre {
+      background:#fafafa;
+      border:1px solid #eee;
+      padding:18px;
+      border-radius:8px;
+      font-size:45px;
+      white-space:pre-wrap;
+    }
+
+    strong {
+      font-size:48px;
+    }
+
+    #status {
+      color:#c00;
+      font-size:45px;
+      margin-top:6px;
+    }
+
+    #graph-panel {
+      display:none;
+    }
+
+    #graph {
+      width:100%;
+      height:500px;
+    }
+    @media (max-width:600px) {
+      #graph {
+        height:380px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>心理線図ツール（スマホ最大化版）</h1>
+</header>
+
+<div class="container">
+
+  <!-- 吸込 -->
+  <div class="panel">
+    <h2>吸込 空気条件</h2>
+
+    <div class="row">
+      <label for="Tin">温度 T_in [℃]</label>
+      <input type="number" id="Tin" step="0.1" placeholder="例: 5">
+    </div>
+
+    <div class="row">
+      <label for="phi_in">相対湿度 φ_in [%]</label>
+      <input type="number" id="phi_in" step="0.1" placeholder="例: 80">
+    </div>
+  </div>
+
+  <!-- 冷却 -->
+  <div class="panel">
+    <h2>冷却後 空気条件</h2>
+
+    <div class="row">
+      <label for="Tout">温度 T_out [℃]</label>
+      <input type="number" id="Tout" step="0.1" placeholder="例: -10">
+    </div>
+
+    <div class="row">
+      <label for="phi_out">相対湿度 φ_out [%]</label>
+      <input type="number" id="phi_out" step="0.1" placeholder="例: 95">
+    </div>
+  </div>
+
+  <!-- 風量・冷凍能力 -->
+  <div class="panel">
+    <h2>風量・冷凍能力</h2>
+
+    <div class="row">
+      <label for="V">風量 V [m³/min]</label>
+      <input type="number" id="V" step="0.1" placeholder="例: 50">
+    </div>
+
+    <div class="row">
+      <label for="Q">冷凍能力 Q [kW]</label>
+      <input type="number" id="Q" step="0.1" placeholder="例: 10">
+    </div>
+
+    <!-- 説明テキスト（小さめで良ければ後でつけ足してもOK） -->
+  </div>
+
+  <!-- ボタン -->
+  <div class="panel">
+    <button class="btn-primary" onclick="onPlot()">プロット</button>
+    <button class="btn-secondary" onclick="onClear()">クリア</button>
+
+    <div id="status"></div>
+  </div>
+
+  <!-- 空気情報 -->
+  <div class="panel">
+    <h2>空気情報</h2>
+
+    <strong>吸込</strong>
+    <pre id="info_in">未計算</pre>
+
+    <strong>冷却</strong>
+    <pre id="info_out">未計算</pre>
+
+    <strong>プロセス</strong>
+    <pre id="info_proc">未計算</pre>
+  </div>
+
+  <!-- グラフ -->
+  <div id="graph-panel" class="panel">
+    <h2>心理線図</h2>
+    <div id="graph"></div>
+  </div>
+
+</div>
+
+<script>
+/* ==============================
+   物性計算
+============================== */
+const P_ATM = 101.325;
+const CA = 1.005;
+const CW = 4.186;
+const HW = 2500.0;
+
+function ps(T){
+  return 0.61078*Math.exp(17.27*T/(T+237.3));
+}
+function calcX(phi,T){
+  const pws = ps(T), pw = phi*pws;
+  return 0.622 * pw / Math.max(P_ATM - pw, 1e-6);
+}
+function calcH(T,x){
+  return CA*T + x*(HW + CW*T);
+}
+function calcV(T,x){
+  const R = 0.287;
+  const Tk = T + 273.15;
+  return (R*Tk/P_ATM)*(1+1.6078*x);
+}
+function linspace(a,b,n){
+  const arr=[];
+  if(n<=1){arr.push(a);return arr;}
+  const d=(b-a)/(n-1);
+  for(let i=0;i<n;i++) arr.push(a+d*i);
+  return arr;
+}
+
+/* ==============================
+   グラフ描画（ズーム禁止）
+============================== */
+function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out){
+  const T = linspace(Tmin, Tmax, 300);
+  const sat = T.map(t => calcX(1, t));
+
+  const traces=[{
+    x:T, y:sat,
+    mode:"lines",
+    name:"100%RH",
+    line:{color:"black"}
+  }];
+
+  for(let rh=10; rh<100; rh+=10){
+    const xs = T.map(t => calcX(rh/100, t));
+    traces.push({
+      x:T, y:xs,
+      mode:"lines",
+      name:`${rh}%`,
+      line:{color:"gray"},
+      opacity:0.6,
+      showlegend:(rh===10)
+    });
+  }
+
+  let x_in=null, x_out=null;
+
+  if(Tin!=null && phi_in!=null){
+    x_in = calcX(phi_in/100, Tin);
+    traces.push({
+      x:[Tin], y:[x_in],
+      mode:"markers+text",
+      marker:{color:"blue", size:10},
+      text:["吸込"],
+      textposition:"top right"
+    });
+  }
+
+  if(Tout!=null && phi_out!=null){
+    x_out = calcX(phi_out/100, Tout);
+    traces.push({
+      x:[Tout], y:[x_out],
+      mode:"markers+text",
+      marker:{color:"red", size:10},
+      text:["冷却"],
+      textposition:"bottom right"
+    });
+  }
+
+  if(x_in!=null && x_out!=null){
+    traces.push({
+      x:[Tin,Tout],
+      y:[x_in,x_out],
+      mode:"lines",
+      line:{color:"purple", dash:"dash"}
+    });
+  }
+
+  const layout = {
+    xaxis:{title:"温度 T [℃]"},
+    yaxis:{title:"絶対湿度 x [kg/kg(DA)]"},
+    margin:{l:60,r:20,t:30,b:60},
+    legend:{orientation:"h"}
+  };
+
+  Plotly.newPlot("graph", traces, layout, {
+    responsive:true,
+    displayModeBar:false,
+    scrollZoom:false,
+    staticPlot:true
+  });
+}
+
+/* ==============================
+   入力取得
+============================== */
+function val(id){
+  const v = document.getElementById(id).value;
+  if(v==="") return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
+/* ==============================
+   プロット
+============================== */
+function onPlot(){
+  const Tin    = val("Tin");
+  const phi_in = val("phi_in");
+  const Tout   = val("Tout");
+  const phi_out= val("phi_out");
+  let   V      = val("V");   // 風量
+  let   Q      = val("Q");   // 冷凍能力 [kW]
+
+  const infoInEl   = document.getElementById("info_in");
+  const infoOutEl  = document.getElementById("info_out");
+  const infoProcEl = document.getElementById("info_proc");
+  const statusEl   = document.getElementById("status");
+
+  // グラフ表示開始
+  document.getElementById("graph-panel").style.display="block";
+
+  // 温度範囲
+  const Ts = [];
+  if(Tin  != null) Ts.push(Tin);
+  if(Tout != null) Ts.push(Tout);
+
+  let Tmin=-10, Tmax=40;
+  if(Ts.length>0){
+    Tmin = Math.min(...Ts) - 5;
+    Tmax = Math.max(...Ts) + 5;
+  }
+
+  drawChart(Tmin, Tmax, Tin, phi_in, Tout, phi_out);
+
+  // ===== 空気状態計算 =====
+  let info1="未計算", info2="未計算";
+  let x1=null, h1=null, v1=null, x2=null, h2=null;
+
+  if(Tin!=null && phi_in!=null){
+    x1 = calcX(phi_in/100, Tin);
+    h1 = calcH(Tin, x1);
+    v1 = calcV(Tin, x1);
+    info1 =
+      `T = ${Tin} ℃\n` +
+      `φ = ${phi_in} %\n` +
+      `x = ${x1.toExponential(6)} kg/kg(DA)\n` +
+      `h = ${h1.toFixed(2)} kJ/kg\n` +
+      `v = ${v1.toFixed(4)} m³/kg`;
+  }
+
+  if(Tout!=null && phi_out!=null){
+    x2 = calcX(phi_out/100, Tout);
+    h2 = calcH(Tout, x2);
+    const v2 = calcV(Tout, x2);
+    info2 =
+      `T = ${Tout} ℃\n` +
+      `φ = ${phi_out} %\n` +
+      `x = ${x2.toExponential(6)} kg/kg(DA)\n` +
+      `h = ${h2.toFixed(2)} kJ/kg\n` +
+      `v = ${v2.toFixed(4)} m³/kg`;
+  }
+
+  infoInEl.textContent  = info1;
+  infoOutEl.textContent = info2;
+
+  // ===== プロセス・V/Q の逆算 =====
+  let procLines = [];
+
+  let delta_h = null;
+  if(h1!=null && h2!=null){
+    delta_h = h1 - h2;
+    procLines.push(`エンタルピ差 Δh = ${delta_h.toFixed(2)} kJ/kg(DA)`);
+  } else {
+    procLines.push("吸込・冷却の温度・湿度がそろうと Δh や V/Q の計算が可能です。");
+  }
+
+  // 6項目のうち、どれが未入力か調べる
+  const inputsMap = {
+    Tin: Tin,
+    phi_in: phi_in,
+    Tout: Tout,
+    phi_out: phi_out,
+    V: V,
+    Q: Q
+  };
+  const missing = Object.keys(inputsMap).filter(k => inputsMap[k] === null);
+
+  // 逆算に使える条件：Δh>0, v1>0, 未入力が1個, その未入力が V または Q
+  if(delta_h != null && delta_h > 0 && v1 != null && v1 > 0){
+    if(missing.length === 1 && (missing[0] === "V" || missing[0] === "Q")){
+      const miss = missing[0];
+
+      if(miss === "V" && Q != null){
+        // ---- Qから必要風量Vを逆算 ----
+        const m_da = Q / delta_h;       // kg/s
+        const V_calc = m_da * v1 * 60;  // m³/min
+        procLines.push("");
+        procLines.push("【逆算結果】");
+        procLines.push(`入力された冷凍能力 Q = ${Q.toFixed(2)} kW を得るための必要風量:`);
+        procLines.push(`  V ≒ ${V_calc.toFixed(2)} m³/min`);
+      } else if(miss === "Q" && V != null){
+        // ---- 風量Vから冷凍能力Qを逆算 ----
+        const V_s = V / 60;          // m³/s
+        const m_da = V_s / v1;       // kg/s
+        const Q_calc = m_da * delta_h; // kW
+        procLines.push("");
+        procLines.push("【逆算結果】");
+        procLines.push(`入力された風量 V = ${V.toFixed(2)} m³/min のときの冷凍能力:`);
+        procLines.push(`  Q ≒ ${Q_calc.toFixed(2)} kW`);
+      }
+    } else {
+      // 通常計算（VもQも入っている or どちらかだけ入っている）
+      if(V != null){
+        const V_s = V / 60;
+        const m_da = V_s / v1;
+        const Q_calc = m_da * delta_h;
+        procLines.push("");
+        procLines.push(`風量 V = ${V.toFixed(2)} m³/min のとき:`);
+        procLines.push(`  冷凍能力 Q ≒ ${Q_calc.toFixed(2)} kW`);
+        if(Q != null){
+          procLines.push(`（参考）入力された Q = ${Q.toFixed(2)} kW`);
+        }
+      } else if(Q != null){
+        procLines.push("");
+        procLines.push("冷凍能力 Q は入力されていますが、風量 V が未入力のため、");
+        procLines.push("通常計算では V と Q のチェックは行っていません。");
+        procLines.push("※ V を空のまま、他を埋めておくと Q から V を逆算します。");
+      }
+    }
+  } else {
+    procLines.push("");
+    procLines.push("※ V/Q の逆算には、吸込・冷却の両方の状態量（T, φ）が必要です。");
+  }
+
+  infoProcEl.textContent = procLines.join("\n");
+  statusEl.textContent   = "プロットしました。";
+}
+
+/* ==============================
+   クリア
+============================== */
+function onClear(){
+  ["Tin","phi_in","Tout","phi_out","V","Q"]
+    .forEach(id => document.getElementById(id).value = "");
+
+  document.getElementById("info_in").textContent   = "未計算";
+  document.getElementById("info_out").textContent  = "未計算";
+  document.getElementById("info_proc").textContent = "未計算";
+
+  document.getElementById("status").textContent    = "クリアしました。";
+
+  Plotly.purge("graph");
+  document.getElementById("graph-panel").style.display = "none";
+}
+</script>
+
+</body>
+</html>
