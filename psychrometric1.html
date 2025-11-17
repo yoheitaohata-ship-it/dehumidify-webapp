@@ -11,7 +11,7 @@
     body {
       font-family: "Yu Gothic", "Meiryo", sans-serif;
       margin: 0;
-      background: #f0f0f0;  /* 全体を少しグレー寄りに */
+      background: #f0f0f0;
     }
 
     header {
@@ -27,8 +27,8 @@
 
     /* ====== レイアウト ====== */
     .container {
-      width:94%;          /* 画面幅の94%にして少し余白を作る */
-      max-width:480px;    /* スマホにちょうど良いくらいの最大幅 */
+      width:94%;
+      max-width:480px;
       margin:0 auto;
       padding:12px 0;
       display:flex;
@@ -36,19 +36,17 @@
       gap:20px;
     }
 
-    /* スマホ: 1カラム / PC: 2カラムになるグリッド */
     .grid {
       display:grid;
-      grid-template-columns: 1fr;  /* デフォルトは1列 */
+      grid-template-columns: 1fr;
       gap:10px;
     }
     @media (min-width:720px) {
       .grid {
-        grid-template-columns: 1fr 1fr;  /* 画面が広くなったら2列 */
+        grid-template-columns: 1fr 1fr;
       }
     }
 
-    /* 入力系パネル（白） */
     .panel-input {
       background:#ffffff;
       padding:15px;
@@ -57,7 +55,6 @@
       box-shadow:0 1px 3px rgba(0,0,0,0.05);
     }
 
-    /* 結果・グラフ系パネル（薄いグレー） */
     .panel-info {
       background:#e9e9e9;
       padding:15px;
@@ -79,7 +76,6 @@
       margin-bottom:18px;
     }
 
-    /* 温度・湿度 / 風量・能力 / ボタンを左右に並べる用 */
     .row-2col {
       display:grid;
       grid-template-columns: 1fr 1fr;
@@ -206,9 +202,8 @@
     </div>
   </div>
 
-  <!-- 風量・冷凍能力 & ボタン：スマホで縦、PCで横 -->
+  <!-- 風量・冷凍能力 & ボタン -->
   <div class="grid">
-    <!-- 風量・冷凍能力 -->
     <div class="panel-input">
       <h2>風量・冷凍能力</h2>
 
@@ -224,7 +219,6 @@
       </div>
     </div>
 
-    <!-- ボタン -->
     <div class="panel-input">
       <h2>操作</h2>
 
@@ -241,9 +235,8 @@
     </div>
   </div>
 
-  <!-- 空気情報 & グラフ：スマホで縦、PCで横 -->
+  <!-- 空気情報 & グラフ -->
   <div class="grid">
-    <!-- 空気情報 -->
     <div class="panel-info">
       <h2>空気情報</h2>
 
@@ -257,7 +250,6 @@
       <pre id="info_proc">未計算</pre>
     </div>
 
-    <!-- グラフ -->
     <div id="graph-panel" class="panel-info">
       <h2>空気線図</h2>
       <div id="graph"></div>
@@ -304,7 +296,7 @@ function solveBisection(f, a, b, maxIter=60, tol=1e-4){
   let fb = f(b);
   if(!isFinite(fa) || !isFinite(fb)) return null;
   if(fa*fb > 0){
-    return null; // 符号が変わらない → 解なし
+    return null;
   }
   for(let i=0;i<maxIter;i++){
     const m = 0.5*(a+b);
@@ -325,7 +317,7 @@ function solveBisection(f, a, b, maxIter=60, tol=1e-4){
 }
 
 /* ==============================
-   グラフ描画（ズーム禁止）
+   グラフ描画（ズーム禁止・凡例なし）
 ============================== */
 function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out){
   const T = linspace(Tmin, Tmax, 300);
@@ -334,8 +326,8 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out){
   const traces=[{
     x:T, y:sat,
     mode:"lines",
-    name:"100%RH",
-    line:{color:"black"}
+    line:{color:"black"},
+    showlegend:false
   }];
 
   for(let rh=10; rh<100; rh+=10){
@@ -343,10 +335,9 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out){
     traces.push({
       x:T, y:xs,
       mode:"lines",
-      name:`${rh}%`,
       line:{color:"gray"},
       opacity:0.6,
-      showlegend:(rh===10)
+      showlegend:false
     });
   }
 
@@ -359,7 +350,8 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out){
       mode:"markers+text",
       marker:{color:"blue", size:10},
       text:["吸込"],
-      textposition:"top right"
+      textposition:"top right",
+      showlegend:false
     });
   }
 
@@ -370,7 +362,8 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out){
       mode:"markers+text",
       marker:{color:"red", size:10},
       text:["冷却"],
-      textposition:"bottom right"
+      textposition:"bottom right",
+      showlegend:false
     });
   }
 
@@ -379,7 +372,8 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out){
       x:[Tin,Tout],
       y:[x_in,x_out],
       mode:"lines",
-      line:{color:"purple", dash:"dash"}
+      line:{color:"purple", dash:"dash"},
+      showlegend:false
     });
   }
 
@@ -387,7 +381,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out){
     xaxis:{title:"温度 T [℃]"},
     yaxis:{title:"絶対湿度 x [kg/kg(DA)]"},
     margin:{l:60,r:20,t:30,b:60},
-    legend:{orientation:"h"}
+    showlegend:false
   };
 
   Plotly.newPlot("graph", traces, layout, {
@@ -424,10 +418,8 @@ function onPlot(){
   const infoProcEl = document.getElementById("info_proc");
   const statusEl   = document.getElementById("status");
 
-  // グラフパネル表示
   document.getElementById("graph-panel").style.display="block";
 
-  // 未入力項目の確認
   const inputsMap = {
     Tin: Tin,
     phi_in: phi_in,
@@ -438,7 +430,6 @@ function onPlot(){
   };
   const missingKeys = Object.keys(inputsMap).filter(k => inputsMap[k] === null);
 
-  // ===== 吸込状態の計算 =====
   let x1=null, h1=null, v1=null;
   if(Tin!=null && phi_in!=null){
     x1 = calcX(phi_in/100, Tin);
@@ -446,7 +437,6 @@ function onPlot(){
     v1 = calcV(Tin, x1);
   }
 
-  // ===== 冷却側の T_out / φ_out 逆算（どちらか片方だけ未入力で、他5つ埋まっている場合） =====
   let Tout_eff = Tout;
   let phi_out_eff = phi_out;
   let solvedMessages = [];
@@ -463,11 +453,10 @@ function onPlot(){
        (miss === "phi_out" && Tout   != null));
 
     if(canSolve && h1 != null && v1 != null && v1 > 0){
-      const m_da = (V/60) / v1; // kg/s
+      const m_da = (V/60) / v1;
       if(m_da > 0){
-        const h2_target = h1 - Q / m_da; // kJ/kg
+        const h2_target = h1 - Q / m_da;
         if(miss === "Tout"){
-          // φ_out は既知。Tを解く。
           const phi_ratio = phi_out / 100.0;
           const fT = T => calcH(T, calcX(phi_ratio, T)) - h2_target;
           const Tlow = -50;
@@ -480,7 +469,6 @@ function onPlot(){
             solvedMessages.push("T_out を逆算できませんでした（条件範囲外）。");
           }
         } else if(miss === "phi_out"){
-          // T_out は既知。φを解く（0〜1）
           const fPhi = phi_ratio => calcH(Tout, calcX(phi_ratio, Tout)) - h2_target;
           const plow = 0.0001;
           const phigh = 1.0;
@@ -499,7 +487,6 @@ function onPlot(){
     }
   }
 
-  // ===== 温度範囲決定（逆算後の Tout_eff も含めて考える） =====
   const Ts = [];
   if(Tin     != null) Ts.push(Tin);
   if(Tout_eff!= null) Ts.push(Tout_eff);
@@ -512,7 +499,6 @@ function onPlot(){
 
   drawChart(Tmin, Tmax, Tin, phi_in, Tout_eff, phi_out_eff);
 
-  // ===== 吸込情報 =====
   let info1="未計算";
   if(Tin!=null && phi_in!=null){
     info1 =
@@ -523,7 +509,6 @@ function onPlot(){
       `v = ${v1.toFixed(4)} m³/kg`;
   }
 
-  // ===== 冷却情報（逆算済みの Tout_eff / φ_out_eff を使用） =====
   let info2="未計算";
   let x2=null, h2=null, v2=null;
   if(Tout_eff!=null && phi_out_eff!=null){
@@ -546,7 +531,6 @@ function onPlot(){
   infoInEl.textContent  = info1;
   infoOutEl.textContent = info2;
 
-  // ===== プロセス・V/Q の逆算 =====
   let procLines = [];
 
   let delta_h = null;
@@ -557,41 +541,38 @@ function onPlot(){
     procLines.push("吸込・冷却の温度・湿度がそろうと Δh や V/Q の計算が可能です。");
   }
 
-  // 冷却条件を逆算したメッセージがあれば追記
   if(solvedMessages.length > 0){
     procLines.push("");
     procLines.push("【冷却条件の逆算】");
     solvedMessages.forEach(msg => procLines.push(msg));
   }
 
-  // V / Q の逆算・計算
   if(delta_h != null && v1 != null && v1 > 0){
-    const missing = missingKeys; // もともとの未入力項目
+    const missing = missingKeys;
 
     if(missing.length === 1 && (missing[0] === "V" || missing[0] === "Q")){
       const miss = missing[0];
 
       if(miss === "V" && Q != null){
-        const m_da = Q / delta_h;     // kg/s
-        const V_calc = m_da * v1 * 60;// m³/min
+        const m_da = Q / delta_h;
+        const V_calc = m_da * v1 * 60;
         procLines.push("");
         procLines.push("【V の逆算】");
         procLines.push(`入力された冷凍能力 Q = ${Q.toFixed(2)} kW を得るために必要な風量:`);
         procLines.push(`  V ≒ ${V_calc.toFixed(2)} m³/min`);
       } else if(miss === "Q" && V != null){
-        const V_s  = V / 60;      // m³/s
-        const m_da = V_s / v1;    // kg/s
-        const Q_calc = m_da * delta_h; // kW
+        const V_s  = V / 60;
+        const m_da = V_s / v1;
+        const Q_calc = m_da * delta_h;
         procLines.push("");
         procLines.push("【Q の逆算】");
         procLines.push(`入力された風量 V = ${V.toFixed(2)} m³/min のときの冷凍能力:`);
         procLines.push(`  Q ≒ ${Q_calc.toFixed(2)} kW`);
       }
     } else {
-      // 通常の計算（V が入っていれば Q を計算）
       if(V != null){
-        const V_s  = V / 60;   // m³/s
-        const m_da = V_s / v1; // kg/s
+        const V_s  = V / 60;
+        const m_da = V_s / v1;
         const Q_calc = m_da * delta_h;
         procLines.push("");
         procLines.push(`風量 V = ${V.toFixed(2)} m³/min のとき:`);
