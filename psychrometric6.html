@@ -230,7 +230,7 @@
 
     <div class="buttons-area">
       <div class="row row-2col">
-        <button class="btn-primary" onclick="onPlot()">プロット</button>
+        <button class="btn-primary" onclick="onPlot()">計算</button>
         <button class="btn-secondary" onclick="onClear()">クリア</button>
       </div>
       <div id="status"></div>
@@ -379,7 +379,7 @@ function val(id){
 }
 
 /* ==============================
-   プロット
+   計算
 ============================== */
 function onPlot(){
   const Tin=val("Tin"), phi_in=val("phi_in");
@@ -533,7 +533,7 @@ function onPlot(){
   }
 
   if(statusParts.length===0){
-    statusEl.textContent="プロットしました。";
+    statusEl.textContent="計算しました。";
   } else {
     statusEl.textContent=statusParts.join("、");
   }
@@ -559,4 +559,5 @@ function onClear(){
 
 </body>
 </html>
+
 
