@@ -137,7 +137,7 @@
     /* ===== ステータス（青で太字・大きく） ===== */
     #status {
       color:#0066cc;
-      font-size:18px;
+      font-size:30px;
       font-weight:bold;
       margin-top:10px;
     }
@@ -434,7 +434,7 @@ function onPlot(){
           const Tsol=solveBisection(fT,-50,60);
           if(Tsol!=null){
             Tout_eff=Tsol;
-            statusParts.push(`冷却温度は ${Tsol.toFixed(2)} ℃`);
+            statusParts.push(`冷却温度： ${Tsol.toFixed(2)} ℃`);
           }
         }
         if(miss==="phi_out"){
@@ -442,7 +442,7 @@ function onPlot(){
           const phisol=solveBisection(fPhi,0.0001,1.0);
           if(phisol!=null){
             phi_out_eff=phisol*100;
-            statusParts.push(`冷却相対湿度は ${phi_out_eff.toFixed(2)} %`);
+            statusParts.push(`冷却相対湿度： ${phi_out_eff.toFixed(2)} %`);
           }
         }
       }
@@ -523,12 +523,12 @@ function onPlot(){
     if(missingKeys.length===1 && missingKeys[0]==="V" && Q!=null){
       const m_da=Q/delta_h;
       const V_calc=m_da*v1*60;
-      statusParts.push(`風量は ${V_calc.toFixed(2)} m³/min`);
+      statusParts.push(`風量： ${V_calc.toFixed(2)} m³/min`);
     }
     if(missingKeys.length===1 && missingKeys[0]==="Q" && V!=null){
       const m_da=(V/60)/v1;
       const Q_calc=m_da*delta_h;
-      statusParts.push(`冷凍能力は ${Q_calc.toFixed(2)} kW`);
+      statusParts.push(`冷凍能力： ${Q_calc.toFixed(2)} kW`);
     }
   }
 
@@ -559,3 +559,4 @@ function onClear(){
 
 </body>
 </html>
+
