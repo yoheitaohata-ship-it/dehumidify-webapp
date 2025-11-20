@@ -431,28 +431,28 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
 
   let x_in=null, x_out=null, x_rh=null;
 
-  // 吸込（紫）
+  // 吸込（オレンジ）
   if(Tin!=null && phi_in!=null){
     x_in=calcX(phi_in/100,Tin);
     traces.push({
       x:[Tin],
       y:[x_in],
       mode:"markers+text",
-      marker:{color:"purple",size:10},
+      marker:{color:"orange",size:10},
       text:["吸込"],
       textposition:"top right",
       showlegend:false
     });
 
-    // x軸下に温度（単位なし）
+    // x軸下に温度（単位なし） — 少し上げ気味（-0.07）にして軸ラベルと干渉しにくく
     annotations.push({
       x:Tin,
-      y:-0.13,
+      y:-0.07,
       xref:"x",
       yref:"paper",
       text:`${Tin.toFixed(1)}`,
       showarrow:false,
-      font:{color:"purple",size:12},
+      font:{color:"orange",size:12},
       yanchor:"top"
     });
 
@@ -464,7 +464,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       yref:"y",
       text:`${x_in.toFixed(4)}`,
       showarrow:false,
-      font:{color:"purple",size:12},
+      font:{color:"orange",size:12},
       xanchor:"right"
     });
   }
@@ -484,7 +484,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
 
     annotations.push({
       x:Tout,
-      y:-0.13,
+      y:-0.07,
       xref:"x",
       yref:"paper",
       text:`${Tout.toFixed(1)}`,
@@ -515,14 +515,14 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
     });
   }
 
-  // 再熱（オレンジ）
+  // 再熱（赤）
   if(T_rh!=null && phi_rh!=null){
     x_rh=calcX(phi_rh/100,T_rh);
     traces.push({
       x:[T_rh],
       y:[x_rh],
       mode:"markers+text",
-      marker:{color:"orange",size:10},
+      marker:{color:"red",size:10},
       text:["再熱"],
       textposition:"top left",
       showlegend:false
@@ -530,12 +530,12 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
 
     annotations.push({
       x:T_rh,
-      y:-0.13,
+      y:-0.07,
       xref:"x",
       yref:"paper",
       text:`${T_rh.toFixed(1)}`,
       showarrow:false,
-      font:{color:"orange",size:12},
+      font:{color:"red",size:12},
       yanchor:"top"
     });
     annotations.push({
@@ -545,17 +545,17 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       yref:"y",
       text:`${x_rh.toFixed(4)}`,
       showarrow:false,
-      font:{color:"orange",size:12},
+      font:{color:"red",size:12},
       xanchor:"right"
     });
 
-    // 冷却→再熱の線：オレンジ実線
+    // 冷却→再熱の線：赤実線
     if(x_out!=null){
       traces.push({
         x:[Tout,T_rh],
         y:[x_out,x_rh],
         mode:"lines",
-        line:{color:"orange"},
+        line:{color:"red"},
         showlegend:false
       });
     }
