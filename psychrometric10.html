@@ -492,7 +492,7 @@ function onPlot(){
           const Tsol=solveBisection(fT,-50,60);
           if(Tsol!=null){
             Tout_eff=Tsol;
-            statusParts.push(`冷却温度：${Tsol.toFixed(2)} ℃`);
+            statusParts.push(`冷却後　空気温度：${Tsol.toFixed(2)} ℃`);
           }
         }
         if(miss==="phi_out"){
@@ -680,3 +680,4 @@ function onClear(){
 
 </body>
 </html>
+
