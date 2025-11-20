@@ -142,7 +142,7 @@
       padding-top:6px;
     }
 
-    /* ===== ステータス（ここに結果パネルを差し込む） ===== */
+    /* ===== 計算結果を表示するエリア ===== */
     #status {
       color:#0066cc;
       font-size:16px;
@@ -281,7 +281,7 @@
       </div>
     </div>
 
-    <!-- 2カラム目：結果（詳細な空気状態） -->
+    <!-- 2カラム目：詳細な空気情報 -->
     <div>
       <div id="info-panel" class="panel-info">
         <h2>空気情報</h2>
@@ -823,7 +823,7 @@ function onPlot(){
 
   drawChart(Tmin,Tmax,Tin,phi_in,Tout_eff,phi_out_eff,T_rh_eff,phi_rh_eff);
 
-  /* ===== ステータス表示：入力と似た2列レイアウト ===== */
+  /* ===== 計算結果パネル：入力と同じ並び ===== */
   const dash = "—";
 
   const TinStr     = (Tin!=null)        ? `${Tin.toFixed(1)} ℃`       : dash;
@@ -833,7 +833,7 @@ function onPlot(){
   const phiOutStr  = (phi_out_eff!=null)? `${phi_out_eff.toFixed(1)} %`: dash;
 
   const TrhStr     = (T_rh_eff!=null)   ? `${T_rh_eff.toFixed(1)} ℃`  : dash;
-  const phiRhStr   = (phi_rh_eff!=null) ? `${phi_rh_eff.toFixed(1)} %`: dash;
+  const QrhStr     = (Q_rh_used!=null)  ? `${Q_rh_used.toFixed(2)} kW`: dash;
 
   const VStr       = (V_used!=null)     ? `${V_used.toFixed(2)} m³/min`: dash;
   const QStr       = (Q_used!=null)     ? `${Q_used.toFixed(2)} kW`   : dash;
@@ -847,22 +847,22 @@ function onPlot(){
 
       <div class="row row-2col">
         <div>
-          <label>吸込空気 温度 T_in [℃]</label>
+          <label>吸込 温度 T_in [℃]</label>
           <div class="result-box">${TinStr}</div>
         </div>
         <div>
-          <label>吸込空気 相対湿度 φ_in [%]</label>
+          <label>吸込 相対湿度 φ_in [%]</label>
           <div class="result-box">${phiInStr}</div>
         </div>
       </div>
 
       <div class="row row-2col">
         <div>
-          <label>冷却空気 温度 T_out [℃]</label>
+          <label>冷却 温度 T_out [℃]</label>
           <div class="result-box">${ToutStr}</div>
         </div>
         <div>
-          <label>冷却空気 相対湿度 φ_out [%]</label>
+          <label>冷却 相対湿度 φ_out [%]</label>
           <div class="result-box">${phiOutStr}</div>
         </div>
       </div>
@@ -880,12 +880,12 @@ function onPlot(){
 
       <div class="row row-2col">
         <div>
-          <label>再熱空気 温度 T_rh [℃]</label>
+          <label>再熱 温度 T_rh [℃]</label>
           <div class="result-box">${TrhStr}</div>
         </div>
         <div>
-          <label>再熱空気 相対湿度 φ_rh [%]</label>
-          <div class="result-box">${phiRhStr}</div>
+          <label>再熱能力 Q_rh [kW]</label>
+          <div class="result-box">${QrhStr}</div>
         </div>
       </div>
 
