@@ -145,10 +145,36 @@
     /* ===== ステータス（青で太字・大きく） ===== */
     #status {
       color:#0066cc;
-      font-size:30px;
+      font-size:18px;
       font-weight:bold;
       margin-top:10px;
-      white-space:pre-wrap;
+      white-space:normal;
+    }
+
+    /* 4項目を2カラム×複数行で表示するグリッド */
+    .status-grid {
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:12px 24px;
+    }
+    .status-item {
+      padding:8px 10px;
+      background:#f0f8ff;
+      border-radius:16px;
+      border:1px solid #99caff;
+    }
+    .status-label {
+      font-size:14px;
+      margin-bottom:4px;
+    }
+    .status-value {
+      font-size:22px;
+      font-weight:bold;
+    }
+
+    .status-extra {
+      margin-bottom:10px;
+      font-size:16px;
     }
 
     pre {
@@ -466,7 +492,7 @@ function onPlot(){
           const Tsol=solveBisection(fT,-50,60);
           if(Tsol!=null){
             Tout_eff=Tsol;
-            statusParts.push(`冷却温度： ${Tsol.toFixed(2)} ℃`);
+            statusParts.push(`冷却温度：${Tsol.toFixed(2)} ℃`);
           }
         }
         if(miss==="phi_out"){
@@ -474,7 +500,7 @@ function onPlot(){
           const phisol=solveBisection(fPhi,0.0001,1.0);
           if(phisol!=null){
             phi_out_eff=phisol*100;
-            statusParts.push(`冷却相対湿度： ${phi_out_eff.toFixed(2)} %`);
+            statusParts.push(`冷却後相対湿度：${phi_out_eff.toFixed(2)} %`);
           }
         }
       }
@@ -554,7 +580,7 @@ function onPlot(){
   let V_used = V;
   let Q_used = Q;
   let m_da_forOutput = null;   // [kg/s] 乾き空気質量流量
-  let L_m3_min = null;         // [m3/min] 水の体積流量
+  let L_L_h = null;           // [L/h] 除湿量
 
   if(delta_h!=null && v1>0){
     if(V_used!=null){
@@ -566,45 +592,71 @@ function onPlot(){
     } else if(Q_used!=null){
       // 冷凍能力から質量流量・風量を逆算
       m_da_forOutput = Q_used/delta_h;      // kg/s
-      V_used = m_da_forOutput*v1*60;        // m3/min
+      V_used = m_da_forOutput*v1*60;        // m³/min
     }
 
-    // 除湿量 L（m3/min）: 水の質量流量→体積流量（密度≒1000kg/m3）
+    // 除湿量 L [L/h]
     if(m_da_forOutput!=null && x1!=null && x2!=null){
-      const m_w = m_da_forOutput*(x1 - x2); // kg/s (x1>x2で除湿量が正)
-      L_m3_min = m_w*60/1000;               // m3/min
+      const m_w = m_da_forOutput*(x1 - x2); // kg/s (x1>x2で除湿)
+      L_L_h = m_w*3600;                     // L/h（1kg≒1L とみなす）
     }
   }
 
-  /* ===== V or Q 逆算（ステータスの補足表示） ===== */
+  /* ===== V or Q 逆算のメッセージ（上部に表示） ===== */
   if(delta_h!=null && v1>0){
     if(missingKeys.length===1 && missingKeys[0]==="V" && Q!=null){
       const m_da=Q/delta_h;
       const V_calc=m_da*v1*60;
-      statusParts.push(`風量： ${V_calc.toFixed(2)} m³/min`);
+      statusParts.push(`逆算風量：${V_calc.toFixed(2)} m³/min`);
     }
     if(missingKeys.length===1 && missingKeys[0]==="Q" && V!=null){
       const m_da=(V/60)/v1;
       const Q_calc=m_da*delta_h;
-      statusParts.push(`冷凍能力： ${Q_calc.toFixed(2)} kW`);
+      statusParts.push(`逆算冷凍能力：${Q_calc.toFixed(2)} kW`);
     }
   }
 
-  /* ===== ステータス表示をまとめる ===== */
-  const resultsTexts = [];
-  if(V_used!=null)        resultsTexts.push(`V = ${V_used.toFixed(2)} m³/min`);
-  if(Q_used!=null)        resultsTexts.push(`Q = ${Q_used.toFixed(2)} kW`);
-  if(L_m3_min!=null)      resultsTexts.push(`L = ${L_m3_min.toFixed(4)} m³/min`);
-  if(m_da_forOutput!=null)resultsTexts.push(`m = ${m_da_forOutput.toFixed(4)} kg/s`);
+  /* ===== ステータス表示を組み立て ===== */
+  if(V_used!=null || Q_used!=null || L_L_h!=null || m_da_forOutput!=null){
+    let html = '<div class="status-grid">';
+    if(V_used!=null){
+      html += `
+        <div class="status-item">
+          <div class="status-label">風量 V [m³/min]</div>
+          <div class="status-value">${V_used.toFixed(2)} m³/min</div>
+        </div>`;
+    }
+    if(Q_used!=null){
+      html += `
+        <div class="status-item">
+          <div class="status-label">冷凍能力 Q [kW]</div>
+          <div class="status-value">${Q_used.toFixed(2)} kW</div>
+        </div>`;
+    }
+    if(L_L_h!=null){
+      html += `
+        <div class="status-item">
+          <div class="status-label">除湿量 L [L/h]</div>
+          <div class="status-value">${L_L_h.toFixed(1)} L/h</div>
+        </div>`;
+    }
+    if(m_da_forOutput!=null){
+      html += `
+        <div class="status-item">
+          <div class="status-label">質量流量 m [kg/s]</div>
+          <div class="status-value">${m_da_forOutput.toFixed(4)} kg/s</div>
+        </div>`;
+    }
+    html += '</div>';
 
-  const resultsLine = (resultsTexts.length>0)
-    ? resultsTexts.join("、")
-    : "V, Q, L, m を計算できませんでした。";
-
-  if(statusParts.length===0){
-    statusEl.textContent = resultsLine;
+    if(statusParts.length>0){
+      statusEl.innerHTML =
+        `<div class="status-extra">${statusParts.join("、")}</div>` + html;
+    } else {
+      statusEl.innerHTML = html;
+    }
   } else {
-    statusEl.textContent = statusParts.join("、") + "\n" + resultsLine;
+    statusEl.textContent = "V, Q, L, m を計算できませんでした。";
   }
 }
 
