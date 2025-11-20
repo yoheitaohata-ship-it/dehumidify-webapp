@@ -732,18 +732,20 @@ function onPlot(){
   infoRhEl.textContent = info3;
 
   /* ===== プロセス情報 ===== */
-  let proc="未計算";
-  if(h1!=null && h2!=null && h3!=null){
-    const delta_net = h1 - h3;
+  let proc = "未計算";
+  if (h1 != null && h2 != null && h3 != null) {
     const delta_h_rh = h3 - h2;
     proc =
-      `エンタルピ差(冷却)     Δh_cool = ${delta_h_cool.toFixed(2)} kJ/kg(DA)\n`+
-      `エンタルピ増加(再熱)   Δh_rh   = ${delta_h_rh.toFixed(2)} kJ/kg(DA)\n`+
-      `入口→再熱後 正味Δh    Δh_net  = ${delta_net.toFixed(2)} kJ/kg(DA)`;
-  } else if(h1!=null && h2!=null){
-    proc = `エンタルピ差 Δh = ${delta_h_cool.toFixed(2)} kJ/kg(DA)`;
+      `エンタルピ差(冷却)\n` +
+      `Δh_cool = ${delta_h_cool.toFixed(2)} kJ/kg(DA)\n` +
+      `エンタルピ差(再熱)\n` +
+      `Δh_rh   = ${delta_h_rh.toFixed(2)} kJ/kg(DA)`;
+  } else if (h1 != null && h2 != null) {
+    proc =
+      `エンタルピ差(冷却)\n` +
+      `Δh_cool = ${delta_h_cool.toFixed(2)} kJ/kg(DA)`;
   }
-  infoProcEl.textContent=proc;
+  infoProcEl.textContent = proc;
 
   /* ===== グラフ範囲と描画 ===== */
   const Ts=[];
@@ -828,3 +830,4 @@ function onClear(){
 
 </body>
 </html>
+
