@@ -431,20 +431,20 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
 
   let x_in=null, x_out=null, x_rh=null;
 
-  // 吸込（オレンジ）
+  // 吸込（緑）
   if(Tin!=null && phi_in!=null){
     x_in=calcX(phi_in/100,Tin);
     traces.push({
       x:[Tin],
       y:[x_in],
       mode:"markers+text",
-      marker:{color:"orange",size:10},
+      marker:{color:"green",size:10},
       text:["吸込"],
       textposition:"top right",
       showlegend:false
     });
 
-    // x軸下に温度（単位なし） — 少し上げ気味（-0.07）にして軸ラベルと干渉しにくく
+    // x軸下に温度（単位なし）
     annotations.push({
       x:Tin,
       y:-0.07,
@@ -452,7 +452,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       yref:"paper",
       text:`${Tin.toFixed(1)}`,
       showarrow:false,
-      font:{color:"orange",size:12},
+      font:{color:"green",size:12},
       yanchor:"top"
     });
 
@@ -464,7 +464,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       yref:"y",
       text:`${x_in.toFixed(4)}`,
       showarrow:false,
-      font:{color:"orange",size:12},
+      font:{color:"green",size:12},
       xanchor:"right"
     });
   }
@@ -499,7 +499,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       yref:"y",
       text:`${x_out.toFixed(4)}`,
       showarrow:false,
-      font:{color:"blue",size:12},  // ← blue に変更
+      font:{color:"blue",size:12},
       xanchor:"right"
     });
   }
@@ -515,7 +515,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
     });
   }
 
-  // 再熱（赤）
+  // 再熱（点は赤、絶対湿度ラベルだけ青）
   if(T_rh!=null && phi_rh!=null){
     x_rh=calcX(phi_rh/100,T_rh);
     traces.push({
@@ -528,6 +528,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       showlegend:false
     });
 
+    // x軸側の温度ラベル（赤）
     annotations.push({
       x:T_rh,
       y:-0.07,
@@ -538,6 +539,8 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       font:{color:"red",size:12},
       yanchor:"top"
     });
+
+    // y軸側の絶対湿度ラベル（青に変更）
     annotations.push({
       x:0,
       y:x_rh,
@@ -545,7 +548,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       yref:"y",
       text:`${x_rh.toFixed(4)}`,
       showarrow:false,
-      font:{color:"red",size:12},
+      font:{color:"blue",size:12},
       xanchor:"right"
     });
 
@@ -891,4 +894,3 @@ function onClear(){
 
 </body>
 </html>
-
