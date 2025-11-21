@@ -222,7 +222,7 @@
       border-radius:32px;
     }
 
-    /* ★ 空気線図 高さ 2倍版（画面用。印刷時は下の @media print で別途指定） */
+    /* ★ 空気線図（画面用の高さ） */
     #graph {
       width:100%;
       height:1000px;
@@ -240,7 +240,6 @@
        ========================== */
     @media (min-width: 960px) {
 
-      /* ★ 全体の幅を約 2/3 に（＝体感で 1/3 ほどスリムに） */
       .container {
         max-width: 1280px;
       }
@@ -348,7 +347,7 @@
         border-radius:18px;
       }
 
-      /* PC用 グラフ高さ（画面表示） */
+      /* PC用 グラフ高さ（画面） */
       #graph {
         height:760px;
       }
@@ -359,7 +358,6 @@
        ========================== */
     @media print {
 
-      /* 画面用の背景色などは印刷では白に */
       body {
         background: #ffffff;
       }
@@ -378,28 +376,37 @@
         padding: 0 8px 8px;
       }
 
-      /* 1ページ目に収めたいブロックは途中で分割されないように */
-      .layout-input,
-      .layout-result,
-      .layout-detail {
-        page-break-inside: avoid;
-        break-inside: avoid;
+      /* 印刷時は縦一列に並べる */
+      .layout-main {
+        display: block;   /* grid を解除して縦並び */
       }
 
-      /* グラフ部分は必ず新しいページから開始 */
+      .layout-input,
+      .layout-result,
+      .layout-detail,
+      .layout-graph {
+        display: block;
+        width: 100%;
+        margin: 0 0 8px;
+      }
+
+      /* 入力・結果・詳細は通常の流れの中で連続して印刷
+         → page-break-inside は指定しない（バラバラ防止のため） */
+
+      /* グラフだけは必ず2ページ目から開始させたい */
       .layout-graph {
         page-break-before: always;  /* 古い仕様用 */
         break-before: page;         /* 新しい仕様用 */
       }
 
-      /* グラフが1ページに収まるよう高さを少し低めにする */
+      /* グラフが1ページに収まるように少し低めに */
       #graph {
-        height: 550px;  /* 必要に応じて 500〜650px で微調整 */
+        height: 520px;  /* 必要に応じて 480〜550px くらいで微調整 */
       }
 
-      /* A4横向き印刷を想定。縦向きにしたい場合は portrait に変更 */
+      /* 用紙向きは印刷ダイアログ側で「横」を選ぶ想定。
+         ここでは margin だけ少し狭めておく */
       @page {
-        size: A4 landscape;
         margin: 10mm;
       }
     }
@@ -794,9 +801,8 @@ function onPlot(){
   const infoProcEl = document.getElementById("info_proc");
   const statusEl   = document.getElementById("status");
 
-  // ★ 計算ボタンを押したときに初めて表示
+  // 計算ボタンを押したときに初めて表示
   document.getElementById("result-panel").style.display = "block";
-
   document.getElementById("graph-panel").style.display="block";
   document.getElementById("info-panel").style.display="block";
 
@@ -969,7 +975,6 @@ function onPlot(){
       const tagTrh = (T_rh==null && T_rh_eff!=null)?"(逆算)":"";
       const tagQrh = (Q_rh==null && Q_rh_used!=null)?"(逆算)":"";
 
-      // 再熱能力行は削除済み
       info3 =
         `乾球温度 T       = ${T_rh_eff.toFixed(1)} ℃ ${tagTrh}\n`+
         `湿球温度 T_w     = ${Twb3.toFixed(1)} ℃\n`+
