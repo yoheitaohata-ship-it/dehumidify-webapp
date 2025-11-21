@@ -222,7 +222,7 @@
       border-radius:32px;
     }
 
-    /* ★ 空気線図（画面用の高さ） */
+    /* ★ 空気線図 高さ 2倍版 */
     #graph {
       width:100%;
       height:1000px;
@@ -237,9 +237,10 @@
 
     /* ===========================
        PC版レイアウト & サイズ調整
-       ========================== */
+       =========================== */
     @media (min-width: 960px) {
 
+      /* ★ 全体の幅を約 2/3 に（＝体感で 1/3 ほどスリムに） */
       .container {
         max-width: 1280px;
       }
@@ -347,67 +348,9 @@
         border-radius:18px;
       }
 
-      /* PC用 グラフ高さ（画面） */
+      /* PC用 グラフ高さ */
       #graph {
         height:760px;
-      }
-    }
-
-    /* ==========================
-       印刷用レイアウト調整
-       ========================== */
-    @media print {
-
-      body {
-        background: #ffffff;
-      }
-
-      header {
-        background: #ffffff;
-        border-bottom: 1px solid #ccc;
-        box-shadow: none;
-        padding: 8px 12px;
-      }
-
-      .container {
-        width: 100%;
-        max-width: none;
-        margin: 0;
-        padding: 0 8px 8px;
-      }
-
-      /* 印刷時は縦一列に並べる */
-      .layout-main {
-        display: block;   /* grid を解除して縦並び */
-      }
-
-      .layout-input,
-      .layout-result,
-      .layout-detail,
-      .layout-graph {
-        display: block;
-        width: 100%;
-        margin: 0 0 8px;
-      }
-
-      /* 入力・結果・詳細は通常の流れの中で連続して印刷
-         → page-break-inside は指定しない（バラバラ防止のため） */
-
-      /* グラフだけは必ず2ページ目から開始させたい */
-      .layout-graph {
-        page-break-before: always;  /* 古い仕様用 */
-        break-before: page;         /* 新しい仕様用 */
-      }
-
-      /* グラフが1ページに収まるように少し低めに */
-      #graph {
-        height: 520px;  /* 必要に応じて 480〜550px くらいで微調整 */
-      }
-
-      /* 用紙向きは印刷ダイアログ側で「横」を選ぶ想定。
-         ここでは margin だけ少し狭めておく */
-      @page {
-        margin: 10mm;
       }
     }
   </style>
@@ -522,6 +465,8 @@
 
     <!-- 下段：グラフ -->
     <div class="layout-graph">
+      <!-- グラフ枠の上に5行分の改行 -->
+      <br><br><br><br><br>
       <div id="graph-panel" class="panel-info">
         <h2>空気線図</h2>
         <div id="graph"></div>
@@ -741,7 +686,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       text:`${x_rh.toFixed(4)}`,
       showarrow:false,
       font:{color:"blue",size:12},
-      xanchor:"right"
+      xanchor:"right`
     });
     if(x_out!=null){
       traces.push({
@@ -801,8 +746,9 @@ function onPlot(){
   const infoProcEl = document.getElementById("info_proc");
   const statusEl   = document.getElementById("status");
 
-  // 計算ボタンを押したときに初めて表示
+  // ★ 計算ボタンを押したときに初めて表示
   document.getElementById("result-panel").style.display = "block";
+
   document.getElementById("graph-panel").style.display="block";
   document.getElementById("info-panel").style.display="block";
 
@@ -975,6 +921,7 @@ function onPlot(){
       const tagTrh = (T_rh==null && T_rh_eff!=null)?"(逆算)":"";
       const tagQrh = (Q_rh==null && Q_rh_used!=null)?"(逆算)":"";
 
+      // 再熱能力行は削除済み
       info3 =
         `乾球温度 T       = ${T_rh_eff.toFixed(1)} ℃ ${tagTrh}\n`+
         `湿球温度 T_w     = ${Twb3.toFixed(1)} ℃\n`+
