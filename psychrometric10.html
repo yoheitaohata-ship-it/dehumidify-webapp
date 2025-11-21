@@ -32,28 +32,19 @@
       padding:12px 0;
     }
 
-    /* メイン3カラムレイアウト（スマホは1カラム） */
+    /* 基本は1カラム（スマホ） */
     .layout-main {
       display:grid;
-      grid-template-columns: 1fr;   /* スマホ：1カラム */
+      grid-template-columns: 1fr;
       gap:16px;
     }
 
-    /* PC幅になったら 1/4, 1/4, 1/2 程度の比率に */
-    @media (min-width: 960px) {
-      .layout-main {
-        grid-template-columns: 1fr 1fr 2fr;  /* 入力 : 結果 : グラフ */
-        align-items:flex-start;
-      }
-    }
+    .layout-input  {}
+    .layout-result {}
+    .layout-detail {}
+    .layout-graph  {}
 
-    /* 左カラム（入力＋ボタン）は縦に並べる */
-    .col-input {
-      display:flex;
-      flex-direction:column;
-      gap:8px;  /* フレーム間の隙間を少し狭く */
-    }
-
+    /* 共通パネル */
     .panel-input {
       background:#ffffff;
       padding:13px;
@@ -63,7 +54,7 @@
     }
 
     .panel-info {
-      background:#e9e9e9;
+      background:#ffffff;
       padding:15px;
       border-radius:32px;
       border:1px solid #d0d0d0;
@@ -77,6 +68,29 @@
       border-bottom:1px solid:#ddd;
       padding-bottom:4px;
       margin-bottom:10px;
+    }
+
+    /* 入力フレームの中身（縦並び） */
+    .col-input-inner {
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    /* 入力・結果のサブフレーム（吸込、冷却など） */
+    .subpanel {
+      border-radius:24px;
+      border:1px solid #ddd;
+      padding:8px 10px 10px;
+      background:#f5f5f5;  /* 空気情報の中フレームと同じ色 */
+    }
+
+    .subpanel-title {
+      font-size:14px;
+      font-weight:bold;
+      margin-bottom:6px;
+      border-bottom:1px dashed #ddd;
+      padding-bottom:3px;
     }
 
     .row {
@@ -142,36 +156,29 @@
       padding-top:6px;
     }
 
-    /* ===== 計算結果を表示するエリア ===== */
+    /* ===== 計算結果（中央カラム） ===== */
     #status {
       color:#0066cc;
       font-size:16px;
       font-weight:normal;
-      margin-top:8px;
+      margin-top:0;
       white-space:normal;
     }
 
-    /* 計算結果 全体パネル（入力と同じ見た目） */
-    .result-panel {
-      margin-top:4px;
-    }
-    .result-panel h2 {
-      font-size:18px;
-      margin-bottom:8px;
-    }
-
-    /* 吸込・冷却・再熱などをさらに小さいフレームで分ける */
     .result-group {
       margin-bottom:8px;
       padding:8px 10px 10px;
       border-radius:24px;
       border:1px solid #ddd;
-      background:#ffffff;
+      background:#f5f5f5;  /* 入力中フレームと同じ薄いグレー */
     }
+
     .result-group-title {
-      font-size:16px;
+      font-size:14px;
       font-weight:bold;
       margin-bottom:6px;
+      border-bottom:1px dashed #ddd;
+      padding-bottom:3px;
     }
 
     .result-box {
@@ -183,9 +190,8 @@
       background:#f8fcff;
       box-sizing:border-box;
     }
-    /* 逆算・計算で求めた項目をハイライト */
     .result-box.calc {
-      background:#ffe9b3;        /* 薄いオレンジ */
+      background:#ffe9b3;
       border-color:#ffb347;
     }
 
@@ -198,6 +204,15 @@
       white-space:pre-wrap;
     }
 
+    /* ★ 空気情報の中フレーム同士の間隔を狭める */
+    #info-panel strong {
+      display:block;
+      margin:4px 0 2px;
+    }
+    #info-panel pre {
+      margin:0 0 6px;
+    }
+
     #graph-panel {
       display:none;
       border-radius:32px;
@@ -207,40 +222,73 @@
       border-radius:32px;
     }
 
+    /* ★ 空気線図 高さ */
     #graph {
       width:100%;
-      height:500px;
+      height:1000px;
       border-radius:24px;
       background:#ffffff;
     }
     @media (max-width:600px) {
       #graph {
-        height:380px;
+        height:760px;
       }
     }
 
     /* ===========================
-       PC版だけ文字・枠をほぼ半分サイズに
+       PC版レイアウト & サイズ調整
        =========================== */
     @media (min-width: 960px) {
+
+      /* ★ 全体の幅を約 2/3 に（＝体感で 1/3 ほどスリムに） */
+      .container {
+        max-width: 1280px;
+      }
+
+      .layout-main {
+        display:grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-areas:
+          "input result detail"
+          "graph graph  graph";
+        column-gap:12px;
+        row-gap:12px;
+      }
+      .layout-input  { grid-area: input; }
+      .layout-result { grid-area: result; }
+      .layout-detail { grid-area: detail; }
+      .layout-graph  { grid-area: graph; }
+
+      /* 3カラムの高さを揃える */
+      .layout-input,
+      .layout-result,
+      .layout-detail {
+        display:flex;
+      }
+      .main-panel {
+        flex:1;
+        display:flex;
+        flex-direction:column;
+      }
+
       header {
-        padding:10px 14px;
+        padding:12px 16px;
       }
       h1 {
-        font-size:11px;
+        font-size:16px;
       }
 
       .panel-input,
       .panel-info {
-        padding:8px;
+        padding:10px;
         border-radius:24px;
       }
 
       .panel-input h2,
       .panel-info h2 {
-        font-size:10px;
-        margin-bottom:6px;
-        padding-bottom:2px;
+        font-size:20px;
+        margin-bottom:8px;
+        padding-bottom:4px;
       }
 
       .row {
@@ -248,57 +296,96 @@
       }
 
       label {
-        font-size:8px;
-        margin-bottom:3px;
-      }
-
-      input[type="number"] {
-        padding:4px 5px;
-        font-size:10px;
-        border-radius:16px;
-      }
-
-      button {
-        padding:6px;
-        font-size:10px;
-        border-radius:16px;
-      }
-
-      #status {
-        font-size:8px;
-        margin-top:4px;
-      }
-
-      .result-panel h2 {
-        font-size:9px;
+        font-size:14px;
         margin-bottom:4px;
       }
 
-      .result-group {
-        padding:5px 6px 6px;
+      input[type="number"] {
+        padding:6px 7px;
+        font-size:18px;
         border-radius:18px;
-        margin-bottom:5px;
+      }
+
+      button {
+        padding:8px;
+        font-size:18px;
+        border-radius:18px;
+      }
+
+      #status {
+        font-size:14px;
+      }
+
+      .result-group {
+        padding:8px 10px 10px;
+        border-radius:18px;
+        margin-bottom:8px;
       }
 
       .result-group-title {
-        font-size:8px;
-        margin-bottom:3px;
+        font-size:15px;
+        margin-bottom:5px;
       }
 
       .result-box {
-        font-size:10px;
-        padding:3px 5px;
-        border-radius:16px;
-      }
-
-      pre {
-        font-size:8px;
-        padding:10px;
+        font-size:18px;
+        padding:5px 8px;
         border-radius:18px;
       }
 
+      .subpanel {
+        padding:8px 10px 10px;
+        border-radius:18px;
+      }
+      .subpanel-title {
+        font-size:15px;
+        margin-bottom:5px;
+      }
+
+      pre {
+        font-size:14px;
+        padding:12px;
+        border-radius:18px;
+      }
+
+      /* PC用 グラフ高さ */
       #graph {
-        height:320px; /* PCではグラフも少し低めに */
+        height:760px;
+      }
+    }
+
+    /* ===== 印刷設定（A4横 & 空気線図を1枚に収める） ===== */
+    @page {
+      size: A4 landscape;
+      margin: 10mm;
+    }
+
+    @media print {
+      body {
+        background:#ffffff;
+      }
+
+      .container {
+        max-width: 100%;
+        width: 100%;
+        padding:0;
+        margin:0 auto;
+      }
+
+      .layout-main {
+        row-gap:8px;
+      }
+
+      /* 空気線図フレームをページ途中で分割しない */
+      #graph-panel {
+        page-break-before: always;   /* グラフは新しいページから開始 */
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      /* グラフ高さをページ内に収まるサイズに縮小 */
+      #graph {
+        height: 15cm;
       }
     }
   </style>
@@ -312,81 +399,93 @@
 <div class="container">
   <div class="layout-main">
 
-    <!-- 1カラム目：入力＋ボタン -->
-    <div class="col-input">
-      <!-- 吸込 -->
-      <div class="panel-input">
-        <h2>吸込 空気条件</h2>
-        <div class="row row-2col">
-          <div>
-            <label for="Tin">温度 T_in [℃]</label>
-            <input type="number" id="Tin" step="0.1">
+    <!-- 左カラム：入力条件（大フレーム） -->
+    <div class="layout-input">
+      <div class="panel-input main-panel">
+        <h2>入力条件</h2>
+        <div class="col-input-inner">
+          <!-- 吸込 -->
+          <div class="subpanel">
+            <div class="subpanel-title">吸込 空気条件</div>
+            <div class="row row-2col">
+              <div>
+                <label for="Tin">温度 T_in [℃]</label>
+                <input type="number" id="Tin" step="0.1">
+              </div>
+              <div>
+                <label for="phi_in">相対湿度 φ_in [%]</label>
+                <input type="number" id="phi_in" step="0.1">
+              </div>
+            </div>
           </div>
-          <div>
-            <label for="phi_in">相対湿度 φ_in [%]</label>
-            <input type="number" id="phi_in" step="0.1">
+
+          <!-- 冷却後 -->
+          <div class="subpanel">
+            <div class="subpanel-title">冷却後 空気条件</div>
+            <div class="row row-2col">
+              <div>
+                <label for="Tout">温度 T_out [℃]</label>
+                <input type="number" id="Tout" step="0.1">
+              </div>
+              <div>
+                <label for="phi_out">相対湿度 φ_out [%]</label>
+                <input type="number" id="phi_out" step="0.1">
+              </div>
+            </div>
+          </div>
+
+          <!-- 風量・冷凍能力 -->
+          <div class="subpanel">
+            <div class="subpanel-title">風量・冷凍能力</div>
+            <div class="row row-2col">
+              <div>
+                <label for="V">風量 V [m³/min]</label>
+                <input type="number" id="V" step="0.1">
+              </div>
+              <div>
+                <label for="Q">冷凍能力 Q [kW]</label>
+                <input type="number" id="Q" step="0.1">
+              </div>
+            </div>
+          </div>
+
+          <!-- 再熱条件 -->
+          <div class="subpanel">
+            <div class="subpanel-title">再熱条件</div>
+            <div class="row row-2col">
+              <div>
+                <label for="T_rh">再熱後温度 T_rh [℃]</label>
+                <input type="number" id="T_rh" step="0.1">
+              </div>
+              <div>
+                <label for="Q_rh">再熱能力 Q_rh [kW]</label>
+                <input type="number" id="Q_rh" step="0.1">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ボタン -->
+        <div class="buttons-area">
+          <div class="row row-2col">
+            <button class="btn-primary" onclick="onPlot()">計算</button>
+            <button class="btn-secondary" onclick="onClear()">クリア</button>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- 冷却後 -->
-      <div class="panel-input">
-        <h2>冷却後 空気条件</h2>
-        <div class="row row-2col">
-          <div>
-            <label for="Tout">温度 T_out [℃]</label>
-            <input type="number" id="Tout" step="0.1">
-          </div>
-          <div>
-            <label for="phi_out">相対湿度 φ_out [%]</label>
-            <input type="number" id="phi_out" step="0.1">
-          </div>
-        </div>
-      </div>
-
-      <!-- 風量・冷凍能力 -->
-      <div class="panel-input">
-        <h2>風量・冷凍能力</h2>
-        <div class="row row-2col">
-          <div>
-            <label for="V">風量 V [m³/min]</label>
-            <input type="number" id="V" step="0.1">
-          </div>
-          <div>
-            <label for="Q">冷凍能力 Q [kW]</label>
-            <input type="number" id="Q" step="0.1">
-          </div>
-        </div>
-      </div>
-
-      <!-- 再熱条件（別フレーム） -->
-      <div class="panel-input">
-        <h2>再熱条件</h2>
-        <div class="row row-2col">
-          <div>
-            <label for="T_rh">再熱後温度 T_rh [℃]</label>
-            <input type="number" id="T_rh" step="0.1">
-          </div>
-          <div>
-            <label for="Q_rh">再熱能力 Q_rh [kW]</label>
-            <input type="number" id="Q_rh" step="0.1">
-          </div>
-        </div>
-      </div>
-
-      <!-- ボタン -->
-      <div class="buttons-area">
-        <div class="row row-2col">
-          <button class="btn-primary" onclick="onPlot()">計算</button>
-          <button class="btn-secondary" onclick="onClear()">クリア</button>
-        </div>
+    <!-- 中央カラム：計算結果（大フレーム） ※最初は非表示 -->
+    <div class="layout-result">
+      <div id="result-panel" class="panel-input main-panel" style="display:none;">
+        <h2>計算結果</h2>
         <div id="status"></div>
       </div>
     </div>
 
-    <!-- 2カラム目：詳細な空気情報 -->
-    <div>
-      <div id="info-panel" class="panel-info">
+    <!-- 右カラム：詳細情報（大フレーム） -->
+    <div class="layout-detail">
+      <div id="info-panel" class="panel-info main-panel" style="display:none;">
         <h2>空気情報</h2>
         <strong>吸込</strong>
         <pre id="info_in">未計算</pre>
@@ -399,9 +498,9 @@
       </div>
     </div>
 
-    <!-- 3カラム目：グラフ -->
-    <div>
-      <div id="graph-panel" class="panel-info">
+    <!-- 下段：グラフ -->
+    <div class="layout-graph">
+      <div id="graph-panel" class="panel-info" style="display:none;">
         <h2>空気線図</h2>
         <div id="graph"></div>
       </div>
@@ -421,51 +520,38 @@ const cw = 1.86;     // kJ/(kg·K)
 const hw = 2501;     // kJ/kg
 
 function ps(T){
-  // 飽和水蒸気圧 [kPa] (T[℃])
   return 0.61078 * Math.exp((17.27 * T) / (T + 237.3));
 }
 function calcX(phi, T){
-  // 絶対湿度 x [kg/kg(DA)]
   const pv = phi * ps(T);
   return 0.622 * pv / (p - pv);
 }
 function calcH(T, x){
-  // 比エンタルピ h [kJ/kg(DA)]
   return ca * T + x * (hw + cw * T);
 }
 function calcV(T,x){
-  // 比容積 v [m³/kg(DA)]
   return (R*(T+273.15)/p)*(1+1.6078*x);
 }
 function calcDewPoint(phi,T){
-  // 露点温度 [℃]
   if(phi<=0) return -273.15;
   const pv = phi * ps(T);
   const ln_pv = Math.log(pv / 0.61078);
   return (237.3 * ln_pv) / (17.27 - ln_pv);
 }
-
-/**
- * 湿球温度を「エンタルピ一定」を条件に数値的に解く版
- */
 function calcWetBulbTemperature(T, RH){
   if(RH <= 0) return T;
   if(RH > 100) RH = 100;
-
   const phi = RH / 100;
   const x   = calcX(phi, T);
   const h_target = calcH(T, x);
-
   const f = Tw => {
     const xs = calcX(1.0, Tw);
     const h_w = calcH(Tw, xs);
     return h_w - h_target;
   };
-
   const Tw_sol = solveBisection(f, -50, T, 80, 1e-4);
   return (Tw_sol === null) ? T : Tw_sol;
 }
-
 function calcSaturationDegree(T,x){
   const xs = calcX(1.0,T);
   return (x/xs*100);
@@ -473,7 +559,6 @@ function calcSaturationDegree(T,x){
 function calcDiscomfortIndex(T,RH){
   return 0.81*T + 0.01*RH*(0.99*T -14.3) + 46.3;
 }
-
 function linspace(a,b,n){
   let arr=[]; let d=(b-a)/(n-1);
   for(let i=0;i<n;i++) arr.push(a+d*i);
@@ -490,24 +575,20 @@ function solveBisection(f,a,b,maxIter=80,tol=1e-4){
   }
   return (a+b)/2;
 }
-
-// T, x から相対湿度 (比) を求める
 function calcPhiFromTx(T, x){
   const pv = x * p / (0.622 + x);
-  return pv / ps(T);   // 0～1
+  return pv / ps(T);
 }
 
 /* ==============================
-   グラフ（色・軸上ラベル付き）
+   グラフ
 ============================== */
 function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
   const T = linspace(Tmin,Tmax,300);
   const sat = T.map(t=>calcX(1,t));
-
   const traces=[];
   const annotations=[];
 
-  // 飽和曲線
   traces.push({
     x:T,
     y:sat,
@@ -515,8 +596,6 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
     line:{color:"black"},
     showlegend:false
   });
-
-  // 等相対湿度線
   for(let rh=10;rh<100;rh+=10){
     const xs=T.map(t=>calcX(rh/100,t));
     traces.push({
@@ -543,8 +622,6 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       textposition:"top right",
       showlegend:false
     });
-
-    // x軸下に温度（単位なし）
     annotations.push({
       x:Tin,
       y:-0.07,
@@ -555,8 +632,6 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       font:{color:"green",size:12},
       yanchor:"top"
     });
-
-    // y軸左に絶対湿度（単位なし）
     annotations.push({
       x:0,
       y:x_in,
@@ -581,7 +656,6 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       textposition:"bottom right",
       showlegend:false
     });
-
     annotations.push({
       x:Tout,
       y:-0.07,
@@ -604,7 +678,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
     });
   }
 
-  // 冷却線（吸込→冷却）：青の実線
+  // 冷却線
   if(x_in!=null && x_out!=null){
     traces.push({
       x:[Tin,Tout],
@@ -615,7 +689,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
     });
   }
 
-  // 再熱（点は赤、絶対湿度ラベルだけ青）
+  // 再熱（点は赤、絶対湿度ラベルは青）
   if(T_rh!=null && phi_rh!=null){
     x_rh=calcX(phi_rh/100,T_rh);
     traces.push({
@@ -627,8 +701,6 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       textposition:"top left",
       showlegend:false
     });
-
-    // x軸側の温度ラベル（赤）
     annotations.push({
       x:T_rh,
       y:-0.07,
@@ -639,8 +711,6 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       font:{color:"red",size:12},
       yanchor:"top"
     });
-
-    // y軸側の絶対湿度ラベル（青）
     annotations.push({
       x:0,
       y:x_rh,
@@ -651,8 +721,6 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       font:{color:"blue",size:12},
       xanchor:"right"
     });
-
-    // 冷却→再熱の線：赤実線
     if(x_out!=null){
       traces.push({
         x:[Tout,T_rh],
@@ -668,9 +736,14 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
     "graph",
     traces,
     {
-      xaxis:{title:"温度 T [℃]"},
-      yaxis:{title:"絶対湿度 x [kg/kg(DA)]"},
-      margin:{l:60,r:20,t:30,b:60},
+      xaxis:{
+        title:"温度 T [℃]",
+        automargin:true
+      },
+      yaxis:{
+        title:"絶対湿度 x [kg/kg(DA)]"
+      },
+      margin:{l:60,r:20,t:30,b:110},
       showlegend:false,
       annotations:annotations
     },
@@ -706,6 +779,9 @@ function onPlot(){
   const infoProcEl = document.getElementById("info_proc");
   const statusEl   = document.getElementById("status");
 
+  // ★ 計算ボタンを押したときに初めて表示
+  document.getElementById("result-panel").style.display = "block";
+
   document.getElementById("graph-panel").style.display="block";
   document.getElementById("info-panel").style.display="block";
 
@@ -719,7 +795,7 @@ function onPlot(){
   if(T_rh==null)   missingKeys.push("T_rh");
   if(Q_rh==null)   missingKeys.push("Q_rh");
 
-  /* ===== 吸込状態 ===== */
+  /* 吸込状態 */
   let x1=null,h1=null,v1=null,Tdp1=null,Twb1=null,pw1=null,mu1=null,di1=null;
   if(Tin!=null && phi_in!=null){
     const phi_ratio=phi_in/100;
@@ -736,12 +812,12 @@ function onPlot(){
   let Tout_eff   = Tout;
   let phi_out_eff= phi_out;
 
-  /* ===== 冷却条件の逆算（Tout または φ_out が1つだけ欠けている場合） ===== */
+  /* 冷却条件の逆算（Tout or φ_out が1つだけ欠けている場合） */
   if(missingKeys.filter(k => k==="Tout" || k==="phi_out").length===1){
     const miss = missingKeys.find(k => k==="Tout" || k==="phi_out");
     if(Tin!=null && phi_in!=null && V!=null && Q!=null && v1>0 && h1!=null){
-      const m_da=(V/60)/v1;           // kg/s
-      const h2_target=h1 - Q/m_da;    // 冷却後エンタルピ
+      const m_da=(V/60)/v1;
+      const h2_target=h1 - Q/m_da;
 
       if(miss==="Tout" && phi_out!=null){
         const phi_ratio=phi_out/100;
@@ -761,7 +837,7 @@ function onPlot(){
     }
   }
 
-  /* ===== 吸込情報表示 ===== */
+  /* 吸込情報表示 */
   let info1="未計算";
   if(x1!=null){
     info1=
@@ -778,7 +854,7 @@ function onPlot(){
   }
   infoInEl.textContent=info1;
 
-  /* ===== 冷却後情報 ===== */
+  /* 冷却後情報 */
   let info2="未計算";
   let x2=null,h2=null,v2=null;
   if(Tout_eff!=null && phi_out_eff!=null){
@@ -809,17 +885,17 @@ function onPlot(){
   }
   infoOutEl.textContent=info2;
 
-  /* ===== 冷却のエンタルピ差 ===== */
+  /* 冷却エンタルピ差 */
   let delta_h_cool = null;
   if(h1!=null && h2!=null){
-    delta_h_cool = h1 - h2;   // kJ/kg(DA)
+    delta_h_cool = h1 - h2;
   }
 
-  /* ===== 風量 V・冷凍能力 Q・除湿量 L・質量流量 m ===== */
+  /* 風量・冷凍能力・除湿量 */
   let V_used = V;
   let Q_used = Q;
-  let m_da_forOutput = null;    // [kg/s]
-  let L_L_h = null;            // [L/h]
+  let m_da_forOutput = null;
+  let L_L_h = null;
 
   if(delta_h_cool!=null && v1>0){
     if(V_used!=null){
@@ -838,7 +914,7 @@ function onPlot(){
     }
   }
 
-  /* ===== 再熱計算 ===== */
+  /* 再熱計算 */
   let info3 = "未計算";
   let T_rh_eff = T_rh;
   let phi_rh_eff = null;
@@ -878,6 +954,7 @@ function onPlot(){
       const tagTrh = (T_rh==null && T_rh_eff!=null)?"(逆算)":"";
       const tagQrh = (Q_rh==null && Q_rh_used!=null)?"(逆算)":"";
 
+      // 再熱能力行は削除済み
       info3 =
         `乾球温度 T       = ${T_rh_eff.toFixed(1)} ℃ ${tagTrh}\n`+
         `湿球温度 T_w     = ${Twb3.toFixed(1)} ℃\n`+
@@ -888,16 +965,12 @@ function onPlot(){
         `飽和度 μ         = ${mu3.toFixed(1)} %\n`+
         `比容積 v         = ${v3.toFixed(4)} m³/kg\n`+
         `比エンタルピ h   = ${h3.toFixed(2)} kJ/kg\n`+
-        `不快指数 DI      = ${di3.toFixed(1)}\n`+
-        (Q_rh_used!=null
-          ? `再熱能力 Q_rh  = ${Q_rh_used.toFixed(2)} kW ${tagQrh}`
-          : ""
-        );
+        `不快指数 DI      = ${di3.toFixed(1)}`;
     }
   }
   infoRhEl.textContent = info3;
 
-  /* ===== プロセス情報（冷却と再熱だけ） ===== */
+  /* プロセス情報 */
   let proc = "未計算";
   if(h1!=null && h2!=null && h3!=null){
     const delta_h_rh = h3 - h2;
@@ -913,7 +986,7 @@ function onPlot(){
   }
   infoProcEl.textContent = proc;
 
-  /* ===== グラフ範囲と描画 ===== */
+  /* グラフ範囲と描画 */
   const Ts=[];
   if(Tin!=null)       Ts.push(Tin);
   if(Tout_eff!=null)  Ts.push(Tout_eff);
@@ -926,7 +999,7 @@ function onPlot(){
 
   drawChart(Tmin,Tmax,Tin,phi_in,Tout_eff,phi_out_eff,T_rh_eff,phi_rh_eff);
 
-  /* ===== 計算結果パネル：グループごとにフレーム分け ===== */
+  /* ===== 計算結果パネル（中央カラム） ===== */
   const dash = "—";
 
   const TinStr     = (Tin!=null)        ? `${Tin.toFixed(1)} ℃`       : dash;
@@ -942,9 +1015,8 @@ function onPlot(){
   const QStr       = (Q_used!=null)     ? `${Q_used.toFixed(2)} kW`   : dash;
 
   const LStr       = (L_L_h!=null)      ? `${L_L_h.toFixed(1)} L/h`   : dash;
-  const mStr       = (m_da_forOutput!=null)? `${m_da_forOutput.toFixed(4)} kg/s` : dash;
+  const phiRhStr   = (phi_rh_eff!=null) ? `${phi_rh_eff.toFixed(1)} %`: dash;
 
-  /* どの項目が「逆算・計算で出たか」を判定 */
   const isToutCalc   = (Tout==null   && Tout_eff   !=null);
   const isPhiOutCalc = (phi_out==null&& phi_out_eff!=null);
   const isVCalc      = (V==null      && V_used     !=null);
@@ -952,9 +1024,9 @@ function onPlot(){
   const isTrhCalc    = (T_rh==null   && T_rh_eff   !=null);
   const isQrhCalc    = (Q_rh==null   && Q_rh_used  !=null);
   const isLCalc      = (L_L_h!=null);
-  const isMCalc      = (m_da_forOutput!=null);
+  const isPhiRhCalc  = (phi_rh_eff!=null);
 
-  const clsTin    = "result-box";                 // 常に入力 or 空欄
+  const clsTin    = "result-box";
   const clsPhiIn  = "result-box";
   const clsTout   = "result-box" + (isToutCalc   ? " calc" : "");
   const clsPhiOut = "result-box" + (isPhiOutCalc ? " calc" : "");
@@ -963,12 +1035,9 @@ function onPlot(){
   const clsTrh    = "result-box" + (isTrhCalc    ? " calc" : "");
   const clsQrh    = "result-box" + (isQrhCalc    ? " calc" : "");
   const clsL      = "result-box" + (isLCalc      ? " calc" : "");
-  const clsM      = "result-box" + (isMCalc      ? " calc" : "");
+  const clsPhiRh  = "result-box" + (isPhiRhCalc  ? " calc" : "");
 
   const html = `
-    <div class="panel-input result-panel">
-      <h2>計算結果</h2>
-
       <div class="result-group">
         <div class="result-group-title">吸込</div>
         <div class="row row-2col">
@@ -1026,20 +1095,18 @@ function onPlot(){
       </div>
 
       <div class="result-group">
-        <div class="result-group-title">除湿量・質量流量</div>
+        <div class="result-group-title">除湿量・再熱湿度</div>
         <div class="row row-2col">
           <div>
             <label>除湿量 L [L/h]</label>
             <div class="${clsL}">${LStr}</div>
           </div>
           <div>
-            <label>質量流量 m [kg/s]</label>
-            <div class="${clsM}">${mStr}</div>
+            <label>再熱湿度 φ_rh [%]</label>
+            <div class="${clsPhiRh}">${phiRhStr}</div>
           </div>
         </div>
       </div>
-
-    </div>
   `;
   statusEl.innerHTML = html;
 }
@@ -1057,7 +1124,9 @@ function onClear(){
   document.getElementById("info_rh").textContent="未計算";
   document.getElementById("info_proc").textContent="未計算";
 
-  document.getElementById("status").textContent="クリアしました。";
+  // クリア時は結果フレームも非表示に戻す
+  document.getElementById("result-panel").style.display = "none";
+  document.getElementById("status").textContent="";
 
   Plotly.purge("graph");
   document.getElementById("graph-panel").style.display="none";
