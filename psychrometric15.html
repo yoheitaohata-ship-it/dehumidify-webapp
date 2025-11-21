@@ -216,6 +216,7 @@
     #graph-panel {
       display:none;
       border-radius:32px;
+      margin-top: 5em;   /* ★ グラフ枠の上に5行分くらいの余白を追加 */
     }
     #info-panel {
       display:none;
@@ -465,8 +466,6 @@
 
     <!-- 下段：グラフ -->
     <div class="layout-graph">
-      <!-- グラフ枠の上に5行分の改行 -->
-      <br><br><br><br><br>
       <div id="graph-panel" class="panel-info">
         <h2>空気線図</h2>
         <div id="graph"></div>
@@ -686,7 +685,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       text:`${x_rh.toFixed(4)}`,
       showarrow:false,
       font:{color:"blue",size:12},
-      xanchor:"right`
+      xanchor:"right"
     });
     if(x_out!=null){
       traces.push({
