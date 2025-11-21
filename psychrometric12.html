@@ -54,13 +54,12 @@
     }
 
     .panel-info {
-      background:#ffffff;  /* ★ 白に変更 ★ */
+      background:#ffffff;
       padding:15px;
       border-radius:32px;
       border:1px solid #d0d0d0;
       box-shadow:0 1px 3px rgba(0,0,0,0.03);
     }
-
 
     .panel-input h2,
     .panel-info h2 {
@@ -83,7 +82,7 @@
       border-radius:24px;
       border:1px solid #ddd;
       padding:8px 10px 10px;
-      background:#f5f5f5;  /* ★ 空気情報の中フレームと同じ色に */
+      background:#f5f5f5;  /* 空気情報の中フレームと同じ色 */
     }
 
     .subpanel-title {
@@ -171,7 +170,7 @@
       padding:8px 10px 10px;
       border-radius:24px;
       border:1px solid #ddd;
-      background:#f5f5f5;  /* ★ ここも同じく薄いグレーに */
+      background:#f5f5f5;  /* 入力中フレームと同じ薄いグレー */
     }
 
     .result-group-title {
@@ -278,7 +277,7 @@
 
       .panel-input h2,
       .panel-info h2 {
-        font-size:20px;   /* ← もとの PC版より約1.5倍 */
+        font-size:20px;
         margin-bottom:8px;
         padding-bottom:4px;
       }
@@ -288,24 +287,24 @@
       }
 
       label {
-        font-size:14px;   /* 11px → 14px にアップ */
+        font-size:14px;
         margin-bottom:4px;
       }
 
       input[type="number"] {
         padding:6px 7px;
-        font-size:18px;   /* 13px → 18px にアップ */
+        font-size:18px;
         border-radius:18px;
       }
 
       button {
         padding:8px;
-        font-size:18px;   /* 13px → 18px にアップ */
+        font-size:18px;
         border-radius:18px;
       }
 
       #status {
-        font-size:14px;   /* 11px → 14px */
+        font-size:14px;
       }
 
       .result-group {
@@ -315,12 +314,12 @@
       }
 
       .result-group-title {
-        font-size:15px;   /* 11px → 15px */
+        font-size:15px;
         margin-bottom:5px;
       }
 
       .result-box {
-        font-size:18px;   /* 13px → 18px */
+        font-size:18px;
         padding:5px 8px;
         border-radius:18px;
       }
@@ -330,12 +329,12 @@
         border-radius:18px;
       }
       .subpanel-title {
-        font-size:15px;   /* 11px → 15px */
+        font-size:15px;
         margin-bottom:5px;
       }
 
       pre {
-        font-size:14px;   /* 11px → 14px */
+        font-size:14px;
         padding:12px;
         border-radius:18px;
       }
@@ -700,7 +699,7 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
       yaxis:{
         title:"絶対湿度 x [kg/kg(DA)]"
       },
-      margin:{l:60,r:20,t:30,b:110},  // ★ x軸ラベルが切れないように bottom を広く
+      margin:{l:60,r:20,t:30,b:110},
       showlegend:false,
       annotations:annotations
     },
@@ -908,6 +907,7 @@ function onPlot(){
       const tagTrh = (T_rh==null && T_rh_eff!=null)?"(逆算)":"";
       const tagQrh = (Q_rh==null && Q_rh_used!=null)?"(逆算)":"";
 
+      // ★ 詳細情報の「再熱能力 Q_rh」行だけ削除済み ★
       info3 =
         `乾球温度 T       = ${T_rh_eff.toFixed(1)} ℃ ${tagTrh}\n`+
         `湿球温度 T_w     = ${Twb3.toFixed(1)} ℃\n`+
@@ -918,11 +918,7 @@ function onPlot(){
         `飽和度 μ         = ${mu3.toFixed(1)} %\n`+
         `比容積 v         = ${v3.toFixed(4)} m³/kg\n`+
         `比エンタルピ h   = ${h3.toFixed(2)} kJ/kg\n`+
-        `不快指数 DI      = ${di3.toFixed(1)}\n`+
-        (Q_rh_used!=null
-          ? `再熱能力 Q_rh  = ${Q_rh_used.toFixed(2)} kW ${tagQrh}`
-          : ""
-        );
+        `不快指数 DI      = ${di3.toFixed(1)}`;
     }
   }
   infoRhEl.textContent = info3;
@@ -1091,5 +1087,3 @@ function onClear(){
 
 </body>
 </html>
-
-
