@@ -214,7 +214,7 @@
     /* ★ 空気線図 高さ 2倍版 */
     #graph {
       width:100%;
-      height:1000px;   /* 通常 2倍 */
+      height:1000px;
       border-radius:24px;
       background:#ffffff;
     }
@@ -228,6 +228,11 @@
        PC版レイアウト & サイズ調整
        =========================== */
     @media (min-width: 960px) {
+
+      /* ★ 全体の幅を約 2/3 に（＝体感で 1/3 ほどスリムに） */
+      .container {
+        max-width: 1280px;
+      }
 
       .layout-main {
         display:grid;
@@ -270,9 +275,9 @@
 
       .panel-input h2,
       .panel-info h2 {
-        font-size:14px;
-        margin-bottom:6px;
-        padding-bottom:3px;
+        font-size:20px;   /* ← もとの PC版より約1.5倍 */
+        margin-bottom:8px;
+        padding-bottom:4px;
       }
 
       .row {
@@ -280,59 +285,59 @@
       }
 
       label {
-        font-size:11px;
+        font-size:14px;   /* 11px → 14px にアップ */
         margin-bottom:4px;
       }
 
       input[type="number"] {
         padding:6px 7px;
-        font-size:13px;
+        font-size:18px;   /* 13px → 18px にアップ */
         border-radius:18px;
       }
 
       button {
         padding:8px;
-        font-size:13px;
+        font-size:18px;   /* 13px → 18px にアップ */
         border-radius:18px;
       }
 
       #status {
-        font-size:11px;
+        font-size:14px;   /* 11px → 14px */
       }
 
       .result-group {
-        padding:6px 8px 8px;
+        padding:8px 10px 10px;
         border-radius:18px;
-        margin-bottom:6px;
+        margin-bottom:8px;
       }
 
       .result-group-title {
-        font-size:11px;
-        margin-bottom:4px;
+        font-size:15px;   /* 11px → 15px */
+        margin-bottom:5px;
       }
 
       .result-box {
-        font-size:13px;
-        padding:4px 7px;
+        font-size:18px;   /* 13px → 18px */
+        padding:5px 8px;
         border-radius:18px;
       }
 
       .subpanel {
-        padding:6px 8px 8px;
+        padding:8px 10px 10px;
         border-radius:18px;
       }
       .subpanel-title {
-        font-size:11px;
-        margin-bottom:4px;
-        padding-bottom:3px;
+        font-size:15px;   /* 11px → 15px */
+        margin-bottom:5px;
       }
 
       pre {
-        font-size:11px;
+        font-size:14px;   /* 11px → 14px */
         padding:12px;
         border-radius:18px;
       }
 
+      /* PC用 グラフ高さ */
       #graph {
         height:760px;
       }
@@ -428,7 +433,6 @@
     <div class="layout-result">
       <div class="panel-input main-panel">
         <h2>計算結果</h2>
-        <!-- ここに JS で result-group を挿入 -->
         <div id="status"></div>
       </div>
     </div>
@@ -686,9 +690,14 @@ function drawChart(Tmin,Tmax,Tin,phi_in,Tout,phi_out,T_rh,phi_rh){
     "graph",
     traces,
     {
-      xaxis:{title:"温度 T [℃]"},
-      yaxis:{title:"絶対湿度 x [kg/kg(DA)]"},
-      margin:{l:60,r:20,t:30,b:60},
+      xaxis:{
+        title:"温度 T [℃]",
+        automargin:true
+      },
+      yaxis:{
+        title:"絶対湿度 x [kg/kg(DA)]"
+      },
+      margin:{l:60,r:20,t:30,b:110},  // ★ x軸ラベルが切れないように bottom を広く
       showlegend:false,
       annotations:annotations
     },
